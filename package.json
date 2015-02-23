@@ -1,0 +1,21 @@
+{
+  "author": {
+    "name": "David Herron",
+    "email": "david@davidherron.com",
+    "url": "http://davidherron.com"
+  },
+  "name": "akashacms-epub",
+  "description": "A plugin for AkashaCMS to build EPUB files",
+  "homepage": "http://akashacms.com/plugins/epub.html",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/akashacms/akashacms-epub.git"
+  },
+  "version": "0.4.0",
+  "engines": {
+    "node": ">=0.10.1"
+  },
+  "dependencies": {
+    "fs-extra": "*"
+  }
+}

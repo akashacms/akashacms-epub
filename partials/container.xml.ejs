@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0">
+	<rootfiles>
+        <%
+        rootfiles.forEach(function(rf) {
+        %>
+        <rootfile full-path="<%= rf.path %>" media-type="<%= rf.type %>"/><%
+        });
+        %>
+	</rootfiles>
+</container>
