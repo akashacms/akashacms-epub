@@ -23,6 +23,7 @@ var url      = require('url');
 var async    = require('async');
 var ejs      = require('ejs');
 var fs       = require('fs-extra');
+var archiver = require('archiver');
 
 var logger;
 var akasha;
@@ -55,38 +56,113 @@ module.exports.config = function(_akasha, _config) {
     if (!config.akashacmsEPUB.metadata) config.akashacmsEPUB.metadata = {};
     if (!config.akashacmsEPUB.manifest) config.akashacmsEPUB.manifest = {};
     
-    [ rendererEpubContainer, rendererXmlEjs, rendererOpfEjs ].forEach(function(renderer) {
+    [ rendererEpubContainer, rendererXmlEjs, rendererOpfEjs, rendererNcxEjs ].forEach(function(renderer) {
 		akasha.registerRenderChain(renderer);
 	});
     
-    akasha.emitter.on('done-render-files', function(cb) {
-        logger.info('done-render-files received');
-        
-        var epubconfig = config.akashacmsEPUB;
-        
-        if (!epubconfig.files2generate.opf) throw new Error('no OPF file specified');
-        if (!epubconfig.rootfiles) {
-            epubconfig.rootfiles = [ ];
-        }
-        epubconfig.rootfiles.push({
-            path: path.join("..", epubconfig.files2generate.opf),
-            type: "application/oebps-package+xml"
-        });
-        
-        fs.writeFileSync(path.join(config.root_out, "mimetype"), "application/epub+zip\n", "utf8");
-        
-        fs.mkdirsSync(path.join(config.root_out, "META-INF"));
-        fs.writeFileSync(path.join(config.root_out, "META-INF", "container.xml"),
-                         akasha.partialSync("container.xml.ejs", epubconfig), "utf8");
-        
-        fs.writeFileSync(path.join(config.root_out, epubconfig.files2generate.opf),
-                         akasha.partialSync("open-package.opf.ejs", epubconfig), "utf8");
-        
-        // fs.rmdirSync(tempDir.path);
-        cb();
+	return module.exports;
+};
+
+module.exports.generateEPUBFiles = function(akasha, config, done) {
+    var epubconfig = config.akashacmsEPUB;
+    
+    if (!epubconfig.files2generate.opf) throw new Error('no OPF file specified');
+    if (!epubconfig.rootfiles) {
+        epubconfig.rootfiles = [ ];
+    }
+    epubconfig.rootfiles.push({
+        path: epubconfig.files2generate.opf,
+        type: "application/oebps-package+xml"
     });
     
-	return module.exports;
+    async.parallel([
+        function(next) {
+            fs.mkdirs(path.join(config.root_out, "META-INF"), next);
+        },
+        function(next) {
+            fs.writeFile(path.join(config.root_out, "mimetype"), "application/epub+zip", "utf8", next);
+        },
+        function(next) {
+            akasha.partial("container.xml.ejs", epubconfig, function(err, html) {
+                if (err) next(err);
+                else {
+                    fs.writeFile(path.join(config.root_out, "META-INF", "container.xml"),
+                                 html, "utf8", next);
+                }
+            });
+        },
+        function(next) {
+            akasha.partial("open-package.opf.ejs", epubconfig, function(err, html) {
+                if (err) next(err);
+                else {
+                    fs.writeFile(path.join(config.root_out, epubconfig.files2generate.opf),
+                                 html, "utf8", next);
+                }
+            });
+        },
+        function(next) {
+            akasha.partial("toc.ncx.ejs", epubconfig, function(err, html) {
+                if (err) next(err);
+                else {
+                    fs.writeFile(path.join(config.root_out, epubconfig.files2generate.ncx),
+                             html, "utf8", next);
+                }
+            });
+    
+        },
+    ],
+    function(err, results) {
+        if (err) done(err);
+        else done();
+    });
+};
+
+module.exports.bundleEPUB = function(config, epubversion, done) {
+    
+    var epubconfig = config.akashacmsEPUB;
+    
+    var archive = archiver('zip');
+    
+    var output = fs.createWriteStream(epubconfig.files2generate.epub);
+            
+    output.on('close', function() {
+        logger.info(archive.pointer() + ' total bytes');
+        logger.info('archiver has been finalized and the output file descriptor has closed.');  
+        done();
+    });
+    
+    archive.on('error', function(err) {
+      done(err);
+    });
+    
+    archive.pipe(output);
+    
+    archive.append(
+        fs.createReadStream(path.join(config.root_out, "mimetype")),
+        { name: "mimetype" });
+    archive.append(
+        fs.createReadStream(path.join(config.root_out, "META-INF", "container.xml")),
+        { name: path.join("META-INF", "container.xml") });
+    archive.append(
+        fs.createReadStream(path.join(config.root_out, epubconfig.files2generate.opf)),
+        { name: epubconfig.files2generate.opf });
+    archive.append(
+        fs.createReadStream(path.join(config.root_out, epubconfig.files2generate.ncx)),
+        { name: epubconfig.files2generate.ncx });
+    
+    async.eachSeries(epubconfig.manifest,
+        function(item, next) {
+            if (item.spinetoc !== true) {
+                archive.append(
+                    fs.createReadStream(path.join(config.root_out, item.href)),
+                    { name: item.href }
+                );
+            }
+            next();
+        },
+        function(err) {
+            archive.finalize();
+        });
 };
 
 var rendererXmlEjs = {
@@ -114,6 +190,27 @@ var rendererOpfEjs = {
   match: function(fname) {
 	var matches;
 	if ((matches = fname.match(/^(.*\.opf)(\.ejs)$/)) !== null) {
+	  return {
+		path: matches[0],
+		renderedFileName: matches[1],
+		extension: matches[2]
+	  };
+	} else {
+	  return null;
+	}
+  },
+  renderSync: function(text, metadata) {
+	return ejs.render(text, metadata);
+  },
+  render: function(text, metadata, done) {
+	done(null, ejs.render(text, metadata));
+  }
+};
+
+var rendererNcxEjs = {
+  match: function(fname) {
+	var matches;
+	if ((matches = fname.match(/^(.*\.ncx)(\.ejs)$/)) !== null) {
 	  return {
 		path: matches[0],
 		renderedFileName: matches[1],

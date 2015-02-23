@@ -16,6 +16,8 @@
     "node": ">=0.10.1"
   },
   "dependencies": {
-    "fs-extra": "*"
+    "fs-extra": "*",
+    "async": "*",
+    "archiver": "*"
   }
 }
