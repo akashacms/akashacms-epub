@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN"
+"http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
+ 
+<ncx version="2005-1" xml:lang="en" xmlns="http://www.daisy.org/z3986/2005/ncx/">
+ 
+  <head>
+<!-- The following four metadata items are required for all NCX documents,
+including those conforming to the relaxed constraints of OPS 2.0 -->
+ 
+    <meta name="dtb:uid" content="<%= metadata.ISBN %>"/> <!-- same as in .opf -->
+    <meta name="dtb:depth" content="1"/> <!-- 1 or higher -->
+    <meta name="dtb:totalPageCount" content="0"/> <!-- must be 0 -->
+    <meta name="dtb:maxPageNumber" content="0"/> <!-- must be 0 -->
+  </head>
+ 
+  <docTitle>
+    <text><%= metadata.title %></text>
+  </docTitle>
+ 
+  <docAuthor>
+    <text><%= metadata.creators[0].nameReversed %></text>
+  </docAuthor>
+
+<navMap>
+    <%
+    var navigation = [];
+    manifest.forEach(function(item) {
+      if (item.spineorder) navigation.push({
+        navclass: item.navclass,
+        id: item.id,
+        order: item.spineorder,
+        title: item.title,
+        content: item.href
+      });
+    });
+    navigation.forEach(function(nav) {
+       %>
+        <navPoint class="<%= nav.navclass %>" id="<%= nav.id %>" playOrder="<%= nav.order %>">
+            <navLabel><text><%= nav.title %></text></navLabel>
+            <content src="<%= nav.content %>" /> 
+        </navPoint>
+       <%
+    });
+    %>
+</navMap>
+
+</ncx>

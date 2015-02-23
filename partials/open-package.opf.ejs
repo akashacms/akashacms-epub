@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <package xmlns="http://www.idpf.org/2007/opf" xmlns:dc="http://purl.org/dc/elements/1.1/"
-	xmlns:dcterms="http://purl.org/dc/terms/" version="3.0" xml:lang="en"
+	xmlns:dcterms="http://purl.org/dc/terms/" version="2.0"
 	unique-identifier="pub-identifier">
 	<metadata><%
         // Check for required parameters
@@ -11,17 +11,16 @@
             throw new Error('no languages');
         }
         %>
-        <% if (typeof metadata.identifier === 'undefined' && metadata.identifier) { %><dc:identifier><%= metadata.identifier %></dc:identifier><% } %>
+        <% if (typeof metadata.identifier !== 'undefined' && metadata.identifier !== null) { %><dc:identifier id="pub-identifier"><%= metadata.identifier %></dc:identifier><% } %>
 		<dc:title id="pub-title"><%= metadata.title %></dc:title>
         <%
         metadata.subjects.forEach(function(subject) {
             %><dc:subject><%= subject %></dc:subject><%
         });
         %>
-        <% if (typeof metadata.description === 'undefined' && metadata.description) { %><dc:description><%= metadata.description %></dc:description><% } %>
-        <% if (typeof metadata.date === 'undefined' && metadata.date) { %><dc:date><%= metadata.date %></dc:date><% } %>
-        <% if (typeof metadata.date === 'undefined' && metadata.date) { %><meta property="dcterms:modified"><%= metadata.date %></meta><% } %>
-        <% if (typeof metadata.format === 'undefined' && metadata.format) { %><dc:format><%= metadata.format %></dc:format><% } %>
+        <% if (typeof metadata.description !== 'undefined' && metadata.description) { %><dc:description><%= metadata.description %></dc:description><% } %>
+        <% if (typeof metadata.date !== 'undefined' && metadata.date) { %><dc:date><%= metadata.date %></dc:date><% } %>
+        <% if (typeof metadata.format !== 'undefined' && metadata.format) { %><dc:format><%= metadata.format %></dc:format><% } %>
         <%
         metadata.languages.forEach(function(language) {
             %><dc:language><%= language %></dc:language><%
@@ -47,7 +46,7 @@
         <dc:creator <%
                 if (creator.id) { %> id="<%= creator.id %>"<% }
                 if (creator.fileAs) { %> opf:file-as="<%= creator.fileAs %>"<% }
-                if (creator.role) { %> opf:role="<%= creator.role %>"<% }
+                if (creator.role) { %> role="<%= creator.role %>"<% }
                 %> ><%= creator.name %></dc:creator><%
         });
         }
@@ -64,21 +63,29 @@
         });
         }
         %>
-        <% if (typeof metadata.publisher === 'undefined' && metadata.publisher) { %><dc:publisher><%= metadata.publisher %></dc:publisher><% } %>
-        <% if (typeof metadata.relation === 'undefined' && metadata.relation) { %><dc:relation><%= metadata.relation %></dc:relation><% } %>
-        <% if (typeof metadata.coverage === 'undefined' && metadata.coverage) { %><dc:coverage><%= metadata.coverage %></dc:coverage><% } %>
-        <% if (typeof metadata.rights === 'undefined' && metadata.rights) { %><dc:rights><%= metadata.rights %></dc:rights><% } %>
+        <% if (typeof metadata.publisher !== 'undefined' && metadata.publisher) { %><dc:publisher><%= metadata.publisher %></dc:publisher><% } %>
+        <% if (typeof metadata.relation !== 'undefined' && metadata.relation) { %><dc:relation><%= metadata.relation %></dc:relation><% } %>
+        <% if (typeof metadata.coverage !== 'undefined' && metadata.coverage) { %><dc:coverage><%= metadata.coverage %></dc:coverage><% } %>
+        <% if (typeof metadata.rights !== 'undefined' && metadata.rights) { %><dc:rights><%= metadata.rights %></dc:rights><% } %>
 	</metadata>
 	<manifest>
     <%
-    manifest.forEach(function(item) {
-      %><item id="<%= item.id %>" <%
+    manifest.forEach(function(item) { %>
+    <item id="<%= item.id %>" <%
         if (item.properties) { %> properties="<%= item.properties %>" <% }
        %>href="<%= item.href %>" media-type="<%= item.type %>"/><%
     });
     %>
 	</manifest>
-	<spine>
+    <%
+    var spinetoc;
+    manifest.forEach(function(item) {
+        if (item.spinetoc === true) {
+            spinetoc = item.id;
+        }
+    })
+    %>
+	<spine toc="<%= spinetoc %>">
         <%
         var spine = [];
         manifest.forEach(function(item) { if (item.spineorder) spine.push(item); });
@@ -90,7 +97,7 @@
         spine.forEach(function(item) {
             %><itemref idref="<%= item.id %>" <%
                 if (item.spinelinear) { %> linear="<%= item.spinelinear %>" <% }
-            %> ><%
+            %> /><%
         });
         %>
 	</spine>
