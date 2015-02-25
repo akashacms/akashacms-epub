@@ -24,6 +24,7 @@ var async    = require('async');
 var ejs      = require('ejs');
 var fs       = require('fs-extra');
 var archiver = require('archiver');
+// IGNORE var epubcheck = require('epubcheck');
 
 var logger;
 var akasha;
@@ -62,6 +63,20 @@ module.exports.config = function(_akasha, _config) {
     
 	return module.exports;
 };
+
+/*
+ * The user experience for this is very disappointing
+module.exports.EPUBcheck = function(config, done) {
+    var epubconfig = config.akashacmsEPUB;
+    epubcheck(epubconfig.files2generate.epub, {
+        epubcheck: "java -jar /usr/bin/epubcheck"
+    },
+    function(err, details) {
+        if (err) done(err);
+        else done(null, details);
+    });
+};
+*/
 
 module.exports.getEPUBmetadata = function(done) {
     return config.akashacmsEPUB;

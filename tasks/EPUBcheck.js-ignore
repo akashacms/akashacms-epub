@@ -1,0 +1,18 @@
+var util = require('util');
+
+module.exports = function(grunt) {
+    grunt.registerTask('EPUBcheck', function() {
+        var done = this.async();
+        grunt.config.requires('akasha');
+        grunt.config.requires('config');
+        var akasha = grunt.config('akasha');
+        var config = grunt.config('config');
+        akasha.plugin('akashacms-epub').EPUBcheck(config, function(err, results) {
+            if (err) done(err);
+            else {
+                util.log(util.inspect(results));
+                done();
+            }
+        });
+    });
+};
