@@ -1,0 +1,7 @@
+<li id="<%= id %>"><a href="<%= item.href %>"><%= item.title %></a></li>
+<%
+// console.log(subtoc);
+if (subtoc) {
+    %><%- partial("toc-epub3-toc.html.ejs", { toc: subtoc }) %><%
+}
+%>

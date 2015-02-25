@@ -1,0 +1,12 @@
+<ol>
+<%
+toc.forEach(function(tocItem) {
+%>
+<%- partial("toc-epub3-item.html.ejs", {
+        id: tocItem.id,
+        item: akashacms.plugin('akashacms-epub').findManifestItem(tocItem.id),
+        subtoc: tocItem.subtoc ? tocItem.subtoc : null
+    }) %><%
+});
+%>
+</ol>

@@ -63,6 +63,10 @@ module.exports.config = function(_akasha, _config) {
 	return module.exports;
 };
 
+module.exports.getEPUBmetadata = function(done) {
+    return config.akashacmsEPUB;
+};
+
 module.exports.generateEPUBFiles = function(akasha, config, done) {
     var epubconfig = config.akashacmsEPUB;
     
@@ -101,6 +105,7 @@ module.exports.generateEPUBFiles = function(akasha, config, done) {
             });
         },
         function(next) {
+            
             akasha.partial("toc.ncx.ejs", epubconfig, function(err, html) {
                 if (err) next(err);
                 else {
@@ -110,6 +115,39 @@ module.exports.generateEPUBFiles = function(akasha, config, done) {
             });
     
         },
+        function(next) {
+            var item = module.exports.findManifestItem(epubconfig.files2generate.toc);
+            // util.log(util.inspect(item));
+            akasha.partial("toc-epub3.html.ejs", {
+                pageLayout: item.toclayout,
+                title: epubconfig.metadata.title,
+                subTitle: item.title,
+                id: epubconfig.files2generate.toc,
+                toc: epubconfig.toc
+            },
+            function(err, html) {
+                if (err) next(err);
+                else {
+                    html = '---\n'
+                         + 'layout: '+ item.toclayout +'\n'
+                         + 'title: '+ epubconfig.metadata.title +'\n'
+                         + '---\n'
+                         + html;
+                    // util.log(html);
+                    akasha.createInMemoryDocument(config, config.root_docs[0],
+                                                  item.path, html, function(err, entry) {
+                        if (err) next(err);
+                        else {
+                            // util.log(util.inspect(entry));
+                            akasha.renderDocument(config, entry, function(err) {
+                                if (err) next(err);
+                                else next();
+                            });
+                        }
+                    });
+                }
+            });
+        }
     ],
     function(err, results) {
         if (err) done(err);
@@ -163,6 +201,21 @@ module.exports.bundleEPUB = function(config, epubversion, done) {
         function(err) {
             archive.finalize();
         });
+};
+
+module.exports.findManifestItem = function(id) {
+    
+    var epubconfig = config.akashacmsEPUB;
+    
+    var found;
+    epubconfig.manifest.forEach(function(item) {
+        // if (!found) util.log('findManifestItem id='+ id +' item.id='+ item.id);
+        if (!found && item.id === id) {
+            // util.log('findManifestItem id='+ id +' '+ util.inspect(item));
+            found = item;
+        }
+    });
+    return found;
 };
 
 var rendererXmlEjs = {
