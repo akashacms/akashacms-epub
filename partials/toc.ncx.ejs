@@ -23,23 +23,11 @@ including those conforming to the relaxed constraints of OPS 2.0 -->
   </docAuthor>
 
 <navMap>
-    <%
-    var navigation = [];
-    manifest.forEach(function(item) {
-      if (item.spineorder) navigation.push({
-        navclass: item.navclass,
-        id: item.id,
-        order: item.spineorder,
-        title: item.title,
-        content: item.href
-      });
-    });
-    navigation.forEach(function(nav) {
+    <% 
+    toc.forEach(function(tocItem) {
+      var item = akashacms.plugin('akashacms-epub').findManifestItem(tocItem.id);
        %>
-        <navPoint class="<%= nav.navclass %>" id="<%= nav.id %>" playOrder="<%= nav.order %>">
-            <navLabel><text><%= nav.title %></text></navLabel>
-            <content src="<%= nav.content %>" /> 
-        </navPoint>
+       <%- partial('toc-navpoint.ncx.ejs', { item: item, tocItem: tocItem }) %>
        <%
     });
     %>

@@ -105,7 +105,6 @@ module.exports.generateEPUBFiles = function(akasha, config, done) {
             });
         },
         function(next) {
-            
             akasha.partial("toc.ncx.ejs", epubconfig, function(err, html) {
                 if (err) next(err);
                 else {
