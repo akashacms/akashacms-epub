@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <package xmlns="http://www.idpf.org/2007/opf" xmlns:dc="http://purl.org/dc/elements/1.1/"
-	xmlns:dcterms="http://purl.org/dc/terms/" version="2.0"
+	xmlns:dcterms="http://purl.org/dc/terms/" version="3.0"
 	unique-identifier="pub-identifier">
 	<metadata><%
         // Check for required parameters
@@ -10,17 +10,32 @@
         if (typeof metadata.languages === 'undefined' || metadata.languages === null) {
             throw new Error('no languages');
         }
+        if (typeof metadata.date == 'undefined' || metadata.date === null
+         || typeof metadata.modified == 'undefined' || metadata.modified === null) {
+            throw new Error('no dates');
+        }
         %>
-        <% if (typeof metadata.identifier !== 'undefined' && metadata.identifier !== null) { %><dc:identifier id="pub-identifier"><%= metadata.identifier %></dc:identifier><% } %>
+        <% if (typeof metadata.identifier !== 'undefined' && metadata.identifier !== null) {
+            %><dc:identifier id="pub-identifier"><%= metadata.identifier %></dc:identifier><%
+        } %>
 		<dc:title id="pub-title"><%= metadata.title %></dc:title>
         <%
         metadata.subjects.forEach(function(subject) {
             %><dc:subject><%= subject %></dc:subject><%
         });
         %>
-        <% if (typeof metadata.description !== 'undefined' && metadata.description) { %><dc:description><%= metadata.description %></dc:description><% } %>
-        <% if (typeof metadata.date !== 'undefined' && metadata.date) { %><dc:date><%= metadata.date %></dc:date><% } %>
-        <% if (typeof metadata.format !== 'undefined' && metadata.format) { %><dc:format><%= metadata.format %></dc:format><% } %>
+        <% if (typeof metadata.description !== 'undefined' && metadata.description) {
+            %><dc:description><%= metadata.description %></dc:description><%
+        } %>
+        <% if (typeof metadata.date !== 'undefined' && metadata.date) {
+            %><dc:date><%= metadata.date %></dc:date><%
+        } %>
+        <% if (typeof metadata.modified !== 'undefined' && metadata.modified) {
+            %><meta property="dcterms:modified"><%= metadata.modified %></meta><%
+        } %>
+        <% if (typeof metadata.format !== 'undefined' && metadata.format) {
+            %><dc:format><%= metadata.format %></dc:format><%
+        } %>
         <%
         metadata.languages.forEach(function(language) {
             %><dc:language><%= language %></dc:language><%
