@@ -1,6 +1,9 @@
-<li><a href="<%= item.href %>"><%= item.title %></a><%
+<%
+// console.log(item);
+if (item.hasOwnProperty("spineorder")) { %>
+<li><a href="<%= item.href %>"><%= akashacms.plugin('akashacms-epub').titleForManifestItem(item) %></a><%
 // console.log(subtoc);
 if (subtoc) {
     %><%- partial("toc-epub3-toc.html.ejs", { toc: subtoc }) %><%
 }
-%></li>
+%></li><% } %>

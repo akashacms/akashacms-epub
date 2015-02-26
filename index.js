@@ -93,15 +93,24 @@ module.exports.generateEPUBFiles = function(akasha, config, done) {
         path: epubconfig.files2generate.opf,
         type: "application/oebps-package+xml"
     });
+	
     
-    async.parallel([
+	// Fix up the title's to be what's in the referenced file
+	// Make sure to do this before running these steps so that we know the titles are right.
+	// By running those steps in parallel we aren't certain of what order anything will execute
+	
+	
+    async.series([
         function(next) {
+			// logger.info('********* mkdirs');
             fs.mkdirs(path.join(config.root_out, "META-INF"), next);
         },
         function(next) {
+			// logger.info('********* mimetype');
             fs.writeFile(path.join(config.root_out, "mimetype"), "application/epub+zip", "utf8", next);
         },
         function(next) {
+			// logger.info('********* container');
             akasha.partial("container.xml.ejs", epubconfig, function(err, html) {
                 if (err) next(err);
                 else {
@@ -111,6 +120,7 @@ module.exports.generateEPUBFiles = function(akasha, config, done) {
             });
         },
         function(next) {
+			// logger.info('********* OPF');
             akasha.partial("open-package.opf.ejs", epubconfig, function(err, html) {
                 if (err) next(err);
                 else {
@@ -120,6 +130,8 @@ module.exports.generateEPUBFiles = function(akasha, config, done) {
             });
         },
         function(next) {
+			// logger.info('********* NCX');
+			// util.log(util.inspect(epubconfig.toc));
             akasha.partial("toc.ncx.ejs", epubconfig, function(err, html) {
                 if (err) next(err);
                 else {
@@ -130,6 +142,7 @@ module.exports.generateEPUBFiles = function(akasha, config, done) {
     
         },
         function(next) {
+			// logger.info('********* TOC');
             var item = module.exports.findManifestItem(epubconfig.files2generate.toc);
             // util.log(util.inspect(item));
             akasha.partial("toc-epub3.html.ejs", {
@@ -217,20 +230,34 @@ module.exports.bundleEPUB = function(config, epubversion, done) {
         });
 };
 
+module.exports.titleForManifestItem = function(item) {
+	var itemEntry = akasha.findDocumentForUrlpath(config, item.href);
+	if (itemEntry && itemEntry.frontmatter.yaml.title)
+		return itemEntry.frontmatter.yaml.title;
+	else if (itemEntry && itemEntry.frontmatter.yaml.pagetitle)
+		return itemEntry.frontmatter.yaml.pagetitle;
+	else 
+		return item.title;
+}
+
 module.exports.findManifestItem = function(id) {
     
     var epubconfig = config.akashacmsEPUB;
     
     var found;
-    epubconfig.manifest.forEach(function(item) {
+	// util.log('findManifestItem '+ util.inspect(epubconfig.manifest));
+	for (var itemkey in epubconfig.manifest) {
+		var item = epubconfig.manifest[itemkey];
         // if (!found) util.log('findManifestItem id='+ id +' item.id='+ item.id);
         if (!found && item.id === id) {
             // util.log('findManifestItem id='+ id +' '+ util.inspect(item));
             found = item;
         }
-    });
+    };
     return found;
 };
+
+// Special renderChain's just for generating EPUB's.
 
 var rendererXmlEjs = {
   match: function(fname) {

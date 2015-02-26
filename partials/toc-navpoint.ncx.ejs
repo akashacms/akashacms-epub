@@ -1,5 +1,5 @@
-<navPoint class="<%= item.navclass %>" id="<%= item.id %>" playOrder="<%= item.spineorder%>">
-    <navLabel><text><%= item.title %></text></navLabel>
+<navPoint class="<%= item.navclass %>" id="<%= item.id %>" playOrder="<%= item.spineorder %>">
+    <navLabel><text><%= akashacms.plugin('akashacms-epub').titleForManifestItem(item) %></text></navLabel>
     <content src="<%= item.href %>" />
     <%
     if (tocItem.hasOwnProperty("subtoc") && tocItem.subtoc) {
