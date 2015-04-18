@@ -1,5 +1,6 @@
 /**
- *
+ * AkashaEPUB - akashacms-epub
+ * 
  * Copyright 2015 David Herron
  * 
  * This file is part of AkashaCMS-embeddables (http://akashacms.com/).
@@ -21,6 +22,7 @@ var path     = require('path');
 var util     = require('util');
 var url      = require('url');
 var async    = require('async');
+var uuid     = require('node-uuid');
 var ejs      = require('ejs');
 var fs       = require('fs-extra');
 var archiver = require('archiver');
@@ -53,9 +55,16 @@ module.exports.config = function(_akasha, _config) {
         config.root_docs.push(config.root_epub3);
     }
     
-    if (!config.akashacmsEPUB.files2generate) config.akashacmsEPUB.files2generate = {};
+    if (!config.akashacmsEPUB.files) {
+        config.akashacmsEPUB.files = { // Provide a default if not given
+            opf: "ebook.opf",
+            ncx: "toc.ncx",
+            epub: "ebook.epub"
+        };
+    }
     if (!config.akashacmsEPUB.metadata) config.akashacmsEPUB.metadata = {};
-    if (!config.akashacmsEPUB.manifest) config.akashacmsEPUB.manifest = {};
+    if (!config.akashacmsEPUB.manifest) config.akashacmsEPUB.manifest = [];
+    if (!config.akashacmsEPUB.opfspine) config.akashacmsEPUB.opfspine = [];
     
     [ rendererEpubContainer, rendererXmlEjs, rendererOpfEjs, rendererNcxEjs ].forEach(function(renderer) {
 		akasha.registerRenderChain(renderer);
@@ -68,7 +77,7 @@ module.exports.config = function(_akasha, _config) {
  * The user experience for this is very disappointing
 module.exports.EPUBcheck = function(config, done) {
     var epubconfig = config.akashacmsEPUB;
-    epubcheck(epubconfig.files2generate.epub, {
+    epubcheck(epubconfig.files.epub, {
         epubcheck: "java -jar /usr/bin/epubcheck"
     },
     function(err, details) {
@@ -82,20 +91,139 @@ module.exports.getEPUBmetadata = function(done) {
     return config.akashacmsEPUB;
 };
 
-module.exports.generateEPUBFiles = function(akasha, config, done) {
+var w3cdate = function(date) {
+    return date.getUTCFullYear() +"-"+ 
+          (date.getUTCMonth() + 1) +"-"+
+           date.getUTCDate() +"T"+
+          (date.getUTCHours() + 1) +":"+
+          (date.getUTCMinutes() + 1) +":"+
+          (date.getUTCSeconds() + 1) +"Z";
+};
+
+module.exports.generateEPUBFiles = function(_akasha, _config, done) {
     var epubconfig = config.akashacmsEPUB;
     
-    if (!epubconfig.files2generate.opf) throw new Error('no OPF file specified');
-    if (!epubconfig.rootfiles) {
-        epubconfig.rootfiles = [ ];
+    if (!config.akashacmsEPUB.files.opf) throw new Error('no OPF file specified');
+    if (!config.akashacmsEPUB.rootfiles) {
+        config.akashacmsEPUB.rootfiles = [ ];
     }
-    epubconfig.rootfiles.push({
-        path: epubconfig.files2generate.opf,
+    
+    if (!config.akashacmsEPUB.metadata.identifier) {
+        config.akashacmsEPUB.metadata.identifier = "urn:uuid:" + uuid.v1();
+    }
+    
+    var rightnow = new Date();
+    if (!config.akashacmsEPUB.metadata.date)
+        config.akashacmsEPUB.metadata.date = w3cdate(rightnow);
+    config.akashacmsEPUB.metadata.modified = w3cdate(rightnow);
+    
+    // Fix the Chapters and subchapters
+    
+    var spineorder = 0;
+    var fixChapters = function(chapter) {
+        ++spineorder;
+        chapter.spineorder = spineorder;
+        chapter.title = module.exports.titleForManifestItem(chapter);
+        if (chapter.subchapters) {
+            chapter.subchapters.forEach(fixChapters);
+        }
+    };
+    config.akashacmsEPUB.chapters.forEach(fixChapters);
+    
+    // logger.info('***** rootfiles ');
+    
+    // Files for META-INF/container.xml
+    config.akashacmsEPUB.rootfiles.push({
+        path: config.akashacmsEPUB.files.opf,
         type: "application/oebps-package+xml"
+    });
+    
+    ////////// Create the file manifests
+    
+    // logger.info('******* Cover image');
+    
+    // Add cover image to manifests
+    config.akashacmsEPUB.manifest.push({
+        id: config.akashacmsEPUB.cover.id,
+        href: "cover.html",
+        type: "application/xhtml+xml"
+    });
+    config.akashacmsEPUB.opfspine.push({
+        idref: config.akashacmsEPUB.cover.id,
+        linear: "yes"
+    });
+    config.akashacmsEPUB.manifest.push({
+        id: config.akashacmsEPUB.cover.idImage,
+        properties: "cover-image",
+        href: config.akashacmsEPUB.cover.src,
+        type: config.akashacmsEPUB.cover.type
+    });
+    
+    // logger.info('****** Table of Contents')
+    
+    // Add Table of Contents to manifests
+    config.akashacmsEPUB.manifest.push({
+        id: config.akashacmsEPUB.contents.id,
+        properties: "nav",
+        type: config.akashacmsEPUB.contents.type,
+        href: config.akashacmsEPUB.contents.href
+    });
+    config.akashacmsEPUB.opfspine.push({
+        idref: config.akashacmsEPUB.contents.id,
+        linear: "yes"
+    });
+    if (config.akashacmsEPUB.contents.ncx) {
+        config.akashacmsEPUB.manifest.push({
+            id: config.akashacmsEPUB.contents.ncx.id,
+            type: "application/x-dtbncx+xml",
+            href: config.akashacmsEPUB.contents.ncx.href
+        });
+    }
+    
+    // logger.info('******** Chapters ');
+    
+    // Add chapter files to manifests
+    var addChapterData = function(chapter) {
+        // logger.info(util.inspect(chapter));
+        config.akashacmsEPUB.manifest.push({
+            id: chapter.id,
+            type: chapter.type,
+            href: chapter.href
+        });
+        config.akashacmsEPUB.opfspine.push({
+            idref: chapter.id,
+        });
+        if (chapter.subchapters) {
+            chapter.subchapters.forEach(addChapterData);
+        }
+    };
+    config.akashacmsEPUB.chapters.forEach(addChapterData);
+    
+    // logger.info('******** Stylesheets ');
+    // logger.info(util.inspect(config.akashacmsEPUB.stylesheets));
+    
+    // Add stylesheets to manifests
+    config.akashacmsEPUB.stylesheets.forEach(function(cssfile) {
+        config.akashacmsEPUB.manifest.push({
+            id: cssfile.id,
+            type: cssfile.type,
+            href: cssfile.href
+        });
+    });
+    
+    // logger.info('******** Assets ');
+    
+    // Add asset files to manifests
+    config.akashacmsEPUB.assets.forEach(function(assetfile) {
+        config.akashacmsEPUB.manifest.push({
+            id: assetfile.id,
+            type: assetfile.type,
+            href: assetfile.href
+        });
     });
 	
     
-	// Fix up the title's to be what's in the referenced file
+	// Fix up the titles to be what's in the referenced file
 	// Make sure to do this before running these steps so that we know the titles are right.
 	// By running those steps in parallel we aren't certain of what order anything will execute
 	
@@ -111,7 +239,7 @@ module.exports.generateEPUBFiles = function(akasha, config, done) {
         },
         function(next) {
 			// logger.info('********* container');
-            akasha.partial("container.xml.ejs", epubconfig, function(err, html) {
+            akasha.partial("container.xml.ejs", config.akashacmsEPUB, function(err, html) {
                 if (err) next(err);
                 else {
                     fs.writeFile(path.join(config.root_out, "META-INF", "container.xml"),
@@ -120,49 +248,62 @@ module.exports.generateEPUBFiles = function(akasha, config, done) {
             });
         },
         function(next) {
+            // logger.info('********* COVER');
+            akasha.partial("cover.html.ejs", {
+                src: config.akashacmsEPUB.cover.src,
+                alt: config.akashacmsEPUB.cover.alt
+            }, function(err, html) {
+                if (err) next(err);
+                else fs.writeFile(path.join(config.root_out, "cover.html"), html, "utf8", next);
+            });
+        },
+        function(next) {
 			// logger.info('********* OPF');
-            akasha.partial("open-package.opf.ejs", epubconfig, function(err, html) {
+            akasha.partial("open-package.opf.ejs", config.akashacmsEPUB, function(err, html) {
                 if (err) next(err);
                 else {
-                    fs.writeFile(path.join(config.root_out, epubconfig.files2generate.opf),
+                    fs.writeFile(path.join(config.root_out, config.akashacmsEPUB.files.opf),
                                  html, "utf8", next);
                 }
             });
         },
         function(next) {
 			// logger.info('********* NCX');
-			// util.log(util.inspect(epubconfig.toc));
-            akasha.partial("toc.ncx.ejs", epubconfig, function(err, html) {
-                if (err) next(err);
-                else {
-                    fs.writeFile(path.join(config.root_out, epubconfig.files2generate.ncx),
-                             html, "utf8", next);
-                }
-            });
+			// util.log(util.inspect(config.akashacmsEPUB.toc));
+            if (config.akashacmsEPUB.contents.ncx) {
+                akasha.partial("toc.ncx.ejs", config.akashacmsEPUB, function(err, html) {
+                    if (err) next(err);
+                    else {
+                        fs.writeFile(path.join(config.root_out, config.akashacmsEPUB.contents.ncx.href),
+                                 html, "utf8", next);
+                    }
+                });
+            } else next();
     
         },
         function(next) {
 			// logger.info('********* TOC');
-            var item = module.exports.findManifestItem(epubconfig.files2generate.toc);
             // util.log(util.inspect(item));
+            // logger.info(util.inspect(config.akashacmsEPUB.manifest));
             akasha.partial("toc-epub3.html.ejs", {
-                pageLayout: item.toclayout,
-                title: epubconfig.metadata.title,
-                subTitle: item.title,
-                id: epubconfig.files2generate.toc,
-                toc: epubconfig.toc
+                pageLayout: config.akashacmsEPUB.contents.toclayout,
+                title: config.akashacmsEPUB.contents.title,
+                subTitle: config.akashacmsEPUB.contents.subtitle,
+                id: config.akashacmsEPUB.contents.id,
+                chapters: config.akashacmsEPUB.chapters,
+                navtype: "toc"
             },
             function(err, html) {
                 if (err) next(err);
                 else {
                     html = '---\n'
-                         + 'layout: '+ item.toclayout +'\n'
-                         + 'title: '+ epubconfig.metadata.title +'\n'
+                         + 'layout: '+ config.akashacmsEPUB.contents.toclayout +'\n'
+                         + 'title: '+ config.akashacmsEPUB.contents.title +'\n'
                          + '---\n'
                          + html;
                     // util.log(html);
                     akasha.createInMemoryDocument(config, config.root_docs[0],
-                                                  item.path, html, function(err, entry) {
+                                                  config.akashacmsEPUB.contents.path, html, function(err, entry) {
                         if (err) next(err);
                         else {
                             // util.log(util.inspect(entry));
@@ -182,13 +323,13 @@ module.exports.generateEPUBFiles = function(akasha, config, done) {
     });
 };
 
-module.exports.bundleEPUB = function(config, epubversion, done) {
+module.exports.bundleEPUB = function(epubversion, done) {
     
     var epubconfig = config.akashacmsEPUB;
     
     var archive = archiver('zip');
     
-    var output = fs.createWriteStream(epubconfig.files2generate.epub);
+    var output = fs.createWriteStream(config.akashacmsEPUB.files.epub);
             
     output.on('close', function() {
         logger.info(archive.pointer() + ' total bytes');
@@ -197,6 +338,7 @@ module.exports.bundleEPUB = function(config, epubversion, done) {
     });
     
     archive.on('error', function(err) {
+      logger.info('*********** BundleEPUB ERROR '+ err);
       done(err);
     });
     
@@ -209,23 +351,26 @@ module.exports.bundleEPUB = function(config, epubversion, done) {
         fs.createReadStream(path.join(config.root_out, "META-INF", "container.xml")),
         { name: path.join("META-INF", "container.xml") });
     archive.append(
-        fs.createReadStream(path.join(config.root_out, epubconfig.files2generate.opf)),
-        { name: epubconfig.files2generate.opf });
-    archive.append(
-        fs.createReadStream(path.join(config.root_out, epubconfig.files2generate.ncx)),
-        { name: epubconfig.files2generate.ncx });
+        fs.createReadStream(path.join(config.root_out, config.akashacmsEPUB.files.opf)),
+        { name: config.akashacmsEPUB.files.opf });
+    // archive.append(
+    //     fs.createReadStream(path.join(config.root_out, config.akashacmsEPUB.files.ncx)),
+    //    { name: config.akashacmsEPUB.files.ncx });
     
-    async.eachSeries(epubconfig.manifest,
+    // logger.info(util.inspect(config.akashacmsEPUB.manifest));
+    async.eachSeries(config.akashacmsEPUB.manifest,
         function(item, next) {
-            if (item.spinetoc !== true) {
-                archive.append(
-                    fs.createReadStream(path.join(config.root_out, item.href)),
-                    { name: item.href }
-                );
-            }
+            // logger.info(util.inspect(item));
+            // if (item.spinetoc !== true) { // this had been used to skip the NCX file
+            archive.append(
+                fs.createReadStream(path.join(config.root_out, item.href)),
+                { name: item.href }
+            );
+            // }
             next();
         },
         function(err) {
+            logger.info('before finalize');
             archive.finalize();
         });
 };
