@@ -3,7 +3,8 @@ layout: <%= pageLayout %>
 title: <%= title %>
 ---
 
-<nav epub:type="toc" id="<%= id %>">
-<h2><%= subTitle %></h2>
-<%- partial("toc-epub3-toc.html.ejs", { toc: toc }) %>
+<nav epub:type="<%= navtype %>" id="<%= id %>">
+<h1><%= title %></h1>
+<% if (subTitle) { %><h2><%= subTitle %></h2><% } %>
+<%- partial("toc-epub3-toc.html.ejs", { chapters: chapters }) %>
 </nav>

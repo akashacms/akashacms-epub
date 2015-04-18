@@ -10,8 +10,7 @@
         if (typeof metadata.languages === 'undefined' || metadata.languages === null) {
             throw new Error('no languages');
         }
-        if (typeof metadata.date == 'undefined' || metadata.date === null
-         || typeof metadata.modified == 'undefined' || metadata.modified === null) {
+        if (typeof metadata.date == 'undefined' || metadata.date === null) {
             throw new Error('no dates');
         }
         %>
@@ -42,39 +41,29 @@
         });
         %>
         <%
-        if (metadata.types) {
-        metadata.types.forEach(function(type) {
-            %><dc:type><%= type %></dc:type><%
-        });
-        }
-        %>
-        <%
-        if (metadata.sources) {
-        metadata.sources.forEach(function(source) {
-            %><dc:source><%= source %></dc:source><%
-        });
+        if (metadata.source) {
+            %><dc:source><%= metadata.source %></dc:source><%
         }
         %>
         <%
         if (metadata.creators) {
         metadata.creators.forEach(function(creator) { %>
-        <dc:creator <%
-                if (creator.id) { %> id="<%= creator.id %>"<% }
-                if (creator.fileAs) { %> opf:file-as="<%= creator.fileAs %>"<% }
-                if (creator.role) { %> role="<%= creator.role %>"<% }
-                %> ><%= creator.name %></dc:creator><%
+        <dc:creator id="<%= creator.id %>"<%
+            if (creator.fileAs) { %> opf:file-as="<%= creator.fileAs %>"<% }
+            %> ><%= creator.name %></dc:creator><%
+            if (creator.role) { %>
+                <meta refines="#<%= creator.id %>" property="role" scheme="marc:relators"><%= creator.role %></meta>
+            <% }
         });
         }
         %>
         <%
         if (metadata.contributors) {
         metadata.contributors.forEach(function(contributor) {%>
-        <dc:contributor <%
-                if (contributor.id) { %> id="<%= contributor.id %>"<% }
+        <dc:contributor id="<%= contributor.id %>"<%
                 if (contributor.fileAs) { %> opf:file-as="<%= contributor.fileAs %>"<% }
                 if (contributor.role) { %> opf:role="<%= contributor.role %>"<% }
                 %> ><%= contributor.name %></dc:contributor><%
-            
         });
         }
         %>
@@ -92,28 +81,15 @@
     });
     %>
 	</manifest>
-    <%
-    var spinetoc;
-    manifest.forEach(function(item) {
-        if (item.spinetoc === true) {
-            spinetoc = item.id;
-        }
-    })
-    %>
-	<spine toc="<%= spinetoc %>">
-        <%
-        var spine = [];
-        manifest.forEach(function(item) { if (item.spineorder) spine.push(item); });
-        spine.sort(function(a, b) {
-            if (a.spineorder < b.spineorder) return -1;
-            else if (a.spineorder === b.spineorder) return 0;
-            else return 1;
-        });
-        spine.forEach(function(item) {
-            %><itemref idref="<%= item.id %>" <%
-                if (item.spinelinear) { %> linear="<%= item.spinelinear %>" <% }
-            %> /><%
-        });
-        %>
+	<spine <%
+	    if (contents.ncx.id) { %>toc="<%= contents.ncx.id %>"<% }
+	%> >
+	<%
+	opfspine.forEach(function(item) { %>
+	<itemref idref="<%= item.idref %>" <%
+	    if (item.linear) { %>linear="<%= item.linear %>" <% }
+	    %> /> <%
+	});
+	%>
 	</spine>
 </package>

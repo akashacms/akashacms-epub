@@ -1,13 +1,11 @@
 <ol>
 <%
-toc.forEach(function(tocItem) {
+chapters.forEach(function(chapterItem) {
 %>
 <%- partial("toc-epub3-item.html.ejs", {
-        id: tocItem.id,
-        item: akashacms.plugin('akashacms-epub').findManifestItem(tocItem.id),
-        subtoc: tocItem.subtoc ? tocItem.subtoc : null
+        id: chapterItem.id,
+        item: chapterItem,
+        subchapters: chapterItem.subchapters ? chapterItem.subchapters : null
     }) %><%
-});
-
-%>
+}); %>
 </ol>

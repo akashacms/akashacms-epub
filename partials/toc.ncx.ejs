@@ -5,7 +5,14 @@
 <!-- The following four metadata items are required for all NCX documents,
 including those conforming to the relaxed constraints of OPS 2.0 -->
  
-    <meta name="dtb:uid" content="<%= metadata.ISBN %>"/> <!-- same as in .opf -->
+    <%
+    // Support ability to give a different identifier for NCX
+    if (metadata.ncxidentifier) {
+    %><meta name="dtb:uid" content="<%= metadata.ncxidentifier %>"/><%
+    } else {
+    %><meta name="dtb:uid" content="<%= metadata.identifier %>"/><%
+    }
+    %>
     <meta name="dtb:depth" content="1"/> <!-- 1 or higher -->
     <meta name="dtb:totalPageCount" content="0"/> <!-- must be 0 -->
     <meta name="dtb:maxPageNumber" content="0"/> <!-- must be 0 -->
@@ -21,11 +28,8 @@ including those conforming to the relaxed constraints of OPS 2.0 -->
 
 <navMap>
     <% 
-    toc.forEach(function(tocItem) {
-      var item = akashacms.plugin('akashacms-epub').findManifestItem(tocItem.id);
-       %>
-       <%- partial('toc-navpoint.ncx.ejs', { item: item, tocItem: tocItem }) %>
-       <%
+    chapters.forEach(function(chapterItem) {
+        %><%- partial('toc-navpoint.ncx.ejs', { chapter: chapterItem }) %><%
     });
     %>
 </navMap>

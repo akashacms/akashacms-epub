@@ -1,12 +1,11 @@
-<navPoint class="<%= item.navclass %>" id="<%= item.id %>" playOrder="<%= item.spineorder %>">
-    <navLabel><text><%= akashacms.plugin('akashacms-epub').titleForManifestItem(item) %></text></navLabel>
-    <content src="<%= item.href %>" />
+<navPoint class="<%= chapter.navclass %>" id="<%= chapter.id %>" playOrder="<%= chapter.spineorder %>">
+    <navLabel><text><%= chapter.title %></text></navLabel>
+    <content src="<%= chapter.href %>" />
     <%
-    if (tocItem.hasOwnProperty("subtoc") && tocItem.subtoc) {
-        tocItem.subtoc.forEach(function(subtocItem) {
-            var subitem = akashacms.plugin('akashacms-epub').findManifestItem(subtocItem.id);
+    if (chapter.hasOwnProperty("subchapters") && chapter.subchapters) {
+        chapter.subchapters.forEach(function(subchapter) {
             %>
-            <%- partial('toc-navpoint.ncx.ejs', { item: subitem, tocItem: subtocItem }) %>
+            <%- partial('toc-navpoint.ncx.ejs', { chapter: subchapter }) %>
             <%
         });
     }
