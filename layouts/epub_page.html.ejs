@@ -3,14 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
 <head>
 <title><%= title %></title>
-<%
-akashacms.plugin('akashacms-epub').getEPUBmetadata().manifest.forEach(function(item) {
-    // TODO Fix the item.href so it computes a correct relative path to the resource
-    if (item.type === "text/css") { %>
-    <link rel="stylesheet" type="<%= item.type %>" href="<%= item.href %>" /><%
-    }
-})
-%>
+<ak-stylesheets></ak-stylesheets>
 </head>
 <body>
 <%- content %>
