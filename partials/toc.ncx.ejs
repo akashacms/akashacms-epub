@@ -7,10 +7,15 @@ including those conforming to the relaxed constraints of OPS 2.0 -->
  
     <%
     // Support ability to give a different identifier for NCX
-    if (metadata.ncxidentifier) {
-    %><meta name="dtb:uid" content="<%= metadata.ncxidentifier %>"/><%
+    var uniqueID = undefined;
+    metadata.identifiers.forEach(function(identifier) {
+        if (typeof identifier.unique !== 'undefined' && identifier.unique !== null) uniqueID = identifier;
+    });
+    if (!uniqueID) throw new Error("No Identifier");
+    if (uniqueID.ncxidentifier) {
+    %><meta name="dtb:uid" content="<%= uniqueID.ncxidentifier %>"/><%
     } else {
-    %><meta name="dtb:uid" content="<%= metadata.identifier %>"/><%
+    %><meta name="dtb:uid" content="<%= uniqueID.idstring %>"/><%
     }
     %>
     <meta name="dtb:depth" content="1"/> <!-- 1 or higher -->

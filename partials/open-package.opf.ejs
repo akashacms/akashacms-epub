@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <package xmlns="http://www.idpf.org/2007/opf" xmlns:dc="http://purl.org/dc/elements/1.1/"
 	xmlns:dcterms="http://purl.org/dc/terms/" version="3.0"
-	unique-identifier="pub-identifier">
+	unique-identifier="epub-unique-identifier">
 	<metadata><%
         // Check for required parameters
         if (typeof metadata.title === 'undefined' || metadata.title === null) {
@@ -14,8 +14,16 @@
             throw new Error('no dates');
         }
         %>
-        <% if (typeof metadata.identifier !== 'undefined' && metadata.identifier !== null) {
-            %><dc:identifier id="pub-identifier"><%= metadata.identifier %></dc:identifier><%
+        <% if (typeof metadata.identifiers !== 'undefined' && metadata.identifiers !== null) {
+            metadata.identifiers.forEach(function(identifier) {
+                %><dc:identifier <%
+                    // The id='pub-identifier' refers to the unique-identifier='pub-identifier' above.
+                    // EPUB's can have multiple dc:identifiers, but only one can be the unique-identifier.
+                    if (typeof identifier.unique !== 'undefined' && identifier.unique !== null) {
+                        %>id="epub-unique-identifier"<%
+                    }
+                    %> ><%= identifier.idstring %></dc:identifier><%
+            });
         } %>
 		<dc:title id="pub-title"><%= metadata.title %></dc:title>
         <%
@@ -49,7 +57,7 @@
         if (metadata.creators) {
         metadata.creators.forEach(function(creator) { %>
         <dc:creator id="<%= creator.id %>"<%
-            if (creator.fileAs) { %> opf:file-as="<%= creator.fileAs %>"<% }
+            // if (creator.fileAs) { % > opf:file-as="< %= creator.fileAs % >"< % }
             %> ><%= creator.name %></dc:creator><%
             if (creator.role) { %>
                 <meta refines="#<%= creator.id %>" property="role" scheme="marc:relators"><%= creator.role %></meta>
