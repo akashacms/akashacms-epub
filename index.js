@@ -18,14 +18,16 @@
  *  limitations under the License.
  */
 
-var path     = require('path');
-var util     = require('util');
-var url      = require('url');
-var async    = require('async');
-var uuid     = require('node-uuid');
-var ejs      = require('ejs');
-var fs       = require('fs-extra');
-var archiver = require('archiver');
+var path      = require('path');
+var util      = require('util');
+var url       = require('url');
+var async     = require('async');
+var uuid      = require('node-uuid');
+var ejs       = require('ejs');
+var fs        = require('fs-extra');
+var archiver  = require('archiver');
+var sprintf   = require("sprintf-js").sprintf,
+    vsprintf  = require("sprintf-js").vsprintf
 // IGNORE var epubcheck = require('epubcheck');
 
 var logger;
@@ -58,7 +60,6 @@ module.exports.config = function(_akasha, _config) {
     if (!config.akashacmsEPUB.files) {
         config.akashacmsEPUB.files = { // Provide a default if not given
             opf: "ebook.opf",
-            ncx: "toc.ncx",
             epub: "ebook.epub"
         };
     }
@@ -92,12 +93,14 @@ module.exports.getEPUBmetadata = function(done) {
 };
 
 var w3cdate = function(date) {
-    return date.getUTCFullYear() +"-"+ 
-          (date.getUTCMonth() + 1) +"-"+
-           date.getUTCDate() +"T"+
-          (date.getUTCHours() + 1) +":"+
-          (date.getUTCMinutes() + 1) +":"+
-          (date.getUTCSeconds() + 1) +"Z";
+    return sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ",
+           date.getUTCFullYear(),
+          (date.getUTCMonth() + 1),
+           date.getUTCDate(),
+          (date.getUTCHours() + 1),
+          (date.getUTCMinutes() + 1),
+          (date.getUTCSeconds() + 1)
+    );
 };
 
 module.exports.generateEPUBFiles = function(_akasha, _config, done) {
@@ -108,8 +111,16 @@ module.exports.generateEPUBFiles = function(_akasha, _config, done) {
         config.akashacmsEPUB.rootfiles = [ ];
     }
     
-    if (!config.akashacmsEPUB.metadata.identifier) {
-        config.akashacmsEPUB.metadata.identifier = "urn:uuid:" + uuid.v1();
+    if (!config.akashacmsEPUB.metadata.identifiers) {
+        config.akashacmsEPUB.metadata.identifiers = [
+            { unique: true, idstring: "urn:uuid:" + uuid.v1() }
+        ];
+    } else {
+        var uniqueCount = 0;
+        config.akashacmsEPUB.metadata.identifiers.forEach(function(identifier) {
+            if (typeof identifier.unique !== 'undefined' && identifier.unique !== null) uniqueCount++;
+        });
+        if (uniqueCount !== 1) throw new Error("There can be only one - unique identifier, that is, found="+ uniqueCount);
     }
     
     var rightnow = new Date();
@@ -251,7 +262,8 @@ module.exports.generateEPUBFiles = function(_akasha, _config, done) {
             // logger.info('********* COVER');
             akasha.partial("cover.html.ejs", {
                 src: config.akashacmsEPUB.cover.src,
-                alt: config.akashacmsEPUB.cover.alt
+                alt: config.akashacmsEPUB.cover.alt,
+                idImage: config.akashacmsEPUB.cover.idImage
             }, function(err, html) {
                 if (err) next(err);
                 else fs.writeFile(path.join(config.root_out, "cover.html"), html, "utf8", next);
