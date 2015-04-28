@@ -6,5 +6,9 @@ title: <%= title %>
 <nav epub:type="<%= navtype %>" id="<%= id %>">
 <h1><%= title %></h1>
 <% if (subTitle) { %><h2><%= subTitle %></h2><% } %>
-<%- partial("toc-epub3-toc.html.ejs", { chapters: chapters }) %>
+<%- partial("toc-epub3-toc.html.ejs", {
+            chapters: chapters,
+            type: toctype,
+            start: tocstart
+    }) %>
 </nav>

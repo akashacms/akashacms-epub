@@ -303,7 +303,9 @@ module.exports.generateEPUBFiles = function(_akasha, _config, done) {
                 subTitle: config.akashacmsEPUB.contents.subtitle,
                 id: config.akashacmsEPUB.contents.id,
                 chapters: config.akashacmsEPUB.chapters,
-                navtype: "toc"
+                navtype: "toc",
+                toctype: config.akashacmsEPUB.contents.toctype,
+                tocstart: config.akashacmsEPUB.contents.tocstart
             },
             function(err, html) {
                 if (err) next(err);

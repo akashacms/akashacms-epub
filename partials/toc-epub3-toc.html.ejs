@@ -1,4 +1,9 @@
-<ol>
+<ol <%
+
+    if (typeof type !== 'undefined') { %> type="<%= type %>" <% }
+    if (typeof start !== 'undefined') { %> start="<%= start %>" <% }
+
+%> >
 <%
 chapters.forEach(function(chapterItem) {
 %>
