@@ -360,7 +360,7 @@ module.exports.bundleEPUB = function(epubversion, done) {
     
     archive.append(
         fs.createReadStream(path.join(config.root_out, "mimetype")),
-        { name: "mimetype" });
+        { name: "mimetype", store: true });
     archive.append(
         fs.createReadStream(path.join(config.root_out, "META-INF", "container.xml")),
         { name: path.join("META-INF", "container.xml") });
