@@ -74,6 +74,40 @@ module.exports.config = function(_akasha, _config) {
 	return module.exports;
 };
 
+module.exports.mahabhuta = [
+    
+		function($, metadata, dirty, done) {
+        	logger.trace('ak-stylesheets');
+            var elements = [];
+            $('ak-stylesheets').each(function(i, elem) { elements.push(elem); });
+            async.eachSeries(elements,
+            function(element, next) {
+				if (typeof config.headerScripts !== "undefined") {
+					akasha.partial("ak_stylesheets.html.ejs", {
+						headerScripts: config.headerScripts 
+					}, function(err, style) {
+						if (err) { logger.error(err); next(err); }
+						else {
+							$(element).replaceWith(style);
+							next();
+						}
+					});
+				}
+				else {
+					$(element).remove();
+					next();
+				}
+            }, 
+            function(err) {
+				if (err) {
+					logger.error('ak-stylesheets Errored with '+ util.inspect(err));
+					done(err);
+				} else done();
+            });
+        },
+		
+    ];
+
 /*
  * The user experience for this is very disappointing
 module.exports.EPUBcheck = function(config, done) {
@@ -97,7 +131,7 @@ var w3cdate = function(date) {
            date.getUTCFullYear(),
           (date.getUTCMonth() + 1),
            date.getUTCDate(),
-          (date.getUTCHours() + 1),
+          (date.getUTCHours()),
           (date.getUTCMinutes() + 1),
           (date.getUTCSeconds() + 1)
     );
@@ -397,7 +431,7 @@ module.exports.titleForManifestItem = function(item) {
 		return itemEntry.frontmatter.yaml.pagetitle;
 	else 
 		return item.title;
-}
+};
 
 module.exports.findManifestItem = function(id) {
     
@@ -412,7 +446,7 @@ module.exports.findManifestItem = function(id) {
             // util.log('findManifestItem id='+ id +' '+ util.inspect(item));
             found = item;
         }
-    };
+    }
     return found;
 };
 
