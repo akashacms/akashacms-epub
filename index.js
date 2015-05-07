@@ -27,7 +27,7 @@ var ejs       = require('ejs');
 var fs        = require('fs-extra');
 var archiver  = require('archiver');
 var sprintf   = require("sprintf-js").sprintf,
-    vsprintf  = require("sprintf-js").vsprintf
+    vsprintf  = require("sprintf-js").vsprintf;
 // IGNORE var epubcheck = require('epubcheck');
 
 var logger;
@@ -350,12 +350,12 @@ module.exports.generateEPUBFiles = function(_akasha, _config, done) {
                          + '---\n'
                          + html;
                     // util.log(html);
-                    akasha.createInMemoryDocument(config, config.root_docs[0],
+                    akasha.createInMemoryDocument(config.root_docs[0],
                                                   config.akashacmsEPUB.contents.path, html, function(err, entry) {
                         if (err) next(err);
                         else {
                             // util.log(util.inspect(entry));
-                            akasha.renderDocument(config, entry, function(err) {
+                            akasha.renderDocument(entry, function(err) {
                                 if (err) next(err);
                                 else next();
                             });
@@ -424,7 +424,7 @@ module.exports.bundleEPUB = function(epubversion, done) {
 };
 
 module.exports.titleForManifestItem = function(item) {
-	var itemEntry = akasha.findDocumentForUrlpath(config, item.href);
+	var itemEntry = akasha.findDocumentForUrlpath(item.href);
 	if (itemEntry && itemEntry.frontmatter.yaml.title)
 		return itemEntry.frontmatter.yaml.title;
 	else if (itemEntry && itemEntry.frontmatter.yaml.pagetitle)
