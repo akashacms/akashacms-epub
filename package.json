@@ -11,7 +11,7 @@
     "type": "git",
     "url": "git://github.com/akashacms/akashacms-epub.git"
   },
-  "version": "0.4.8",
+  "version": "0.4.9",
   "engines": {
     "node": ">=0.10.1"
   },
@@ -21,6 +21,9 @@
     "async": "*",
     "archiver": "*",
     "ejs": "*",
-    "sprintf-js": "*"
+    "sprintf-js": "*",
+    "globfs": "*",
+    "mime": "*",
+    "js-yaml": "*"
   }
 }

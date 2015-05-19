@@ -1,21 +1,41 @@
-<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<%
+/**
+ * AkashaEPUB - akashacms-epub
+ * 
+ * Copyright 2015 David Herron
+ * 
+ * This file is part of AkashaCMS-epub (http://akashacms.com/).
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+%><?xml version="1.0" encoding="utf-8" standalone="no"?>
 <package xmlns="http://www.idpf.org/2007/opf" xmlns:dc="http://purl.org/dc/elements/1.1/"
 	xmlns:dcterms="http://purl.org/dc/terms/" version="3.0"
 	unique-identifier="epub-unique-identifier">
 	<metadata><%
         // Check for required parameters
-        if (typeof metadata.title === 'undefined' || metadata.title === null) {
+        if (typeof title === 'undefined' || title === null) {
             throw new Error('no title');
         }
-        if (typeof metadata.languages === 'undefined' || metadata.languages === null) {
+        if (typeof languages === 'undefined' || languages === null) {
             throw new Error('no languages');
         }
-        if (typeof metadata.date == 'undefined' || metadata.date === null) {
+        if (typeof date == 'undefined' || date === null) {
             throw new Error('no dates');
         }
         %>
-        <% if (typeof metadata.identifiers !== 'undefined' && metadata.identifiers !== null) {
-            metadata.identifiers.forEach(function(identifier) {
+        <% if (typeof identifiers !== 'undefined' && identifiers !== null) {
+            identifiers.forEach(function(identifier) {
                 %><dc:identifier <%
                     // The id='pub-identifier' refers to the unique-identifier='pub-identifier' above.
                     // EPUB's can have multiple dc:identifiers, but only one can be the unique-identifier.
@@ -25,37 +45,37 @@
                     %> ><%= identifier.idstring %></dc:identifier><%
             });
         } %>
-		<dc:title id="pub-title"><%= metadata.title %></dc:title>
+		<dc:title id="pub-title"><%= title %></dc:title>
         <%
-        metadata.subjects.forEach(function(subject) {
+        subjects.forEach(function(subject) {
             %><dc:subject><%= subject %></dc:subject><%
         });
         %>
-        <% if (typeof metadata.description !== 'undefined' && metadata.description) {
-            %><dc:description><%= metadata.description %></dc:description><%
+        <% if (typeof description !== 'undefined' && description) {
+            %><dc:description><%= description %></dc:description><%
         } %>
-        <% if (typeof metadata.date !== 'undefined' && metadata.date) {
-            %><dc:date><%= metadata.date %></dc:date><%
+        <% if (typeof date !== 'undefined' && date) {
+            %><dc:date><%= date %></dc:date><%
         } %>
-        <% if (typeof metadata.modified !== 'undefined' && metadata.modified) {
-            %><meta property="dcterms:modified"><%= metadata.modified %></meta><%
+        <% if (typeof modified !== 'undefined' && modified) {
+            %><meta property="dcterms:modified"><%= modified %></meta><%
         } %>
-        <% if (typeof metadata.format !== 'undefined' && metadata.format) {
-            %><dc:format><%= metadata.format %></dc:format><%
+        <% if (typeof format !== 'undefined' && format) {
+            %><dc:format><%= format %></dc:format><%
         } %>
         <%
-        metadata.languages.forEach(function(language) {
+        languages.forEach(function(language) {
             %><dc:language><%= language %></dc:language><%
         });
         %>
         <%
-        if (metadata.source) {
-            %><dc:source><%= metadata.source %></dc:source><%
+        if (source) {
+            %><dc:source><%= source %></dc:source><%
         }
         %>
         <%
-        if (metadata.creators) {
-        metadata.creators.forEach(function(creator) { %>
+        if (creators) {
+        creators.forEach(function(creator) { %>
         <dc:creator id="<%= creator.id %>"<%
             // if (creator.fileAs) { % > opf:file-as="< %= creator.fileAs % >"< % }
             %> ><%= creator.name %></dc:creator><%
@@ -66,8 +86,8 @@
         }
         %>
         <%
-        if (metadata.contributors) {
-        metadata.contributors.forEach(function(contributor) {%>
+        if (contributors) {
+        contributors.forEach(function(contributor) {%>
         <dc:contributor id="<%= contributor.id %>"<%
                 if (contributor.fileAs) { %> opf:file-as="<%= contributor.fileAs %>"<% }
                 if (contributor.role) { %> opf:role="<%= contributor.role %>"<% }
@@ -75,10 +95,10 @@
         });
         }
         %>
-        <% if (typeof metadata.publisher !== 'undefined' && metadata.publisher) { %><dc:publisher><%= metadata.publisher %></dc:publisher><% } %>
-        <% if (typeof metadata.relation !== 'undefined' && metadata.relation) { %><dc:relation><%= metadata.relation %></dc:relation><% } %>
-        <% if (typeof metadata.coverage !== 'undefined' && metadata.coverage) { %><dc:coverage><%= metadata.coverage %></dc:coverage><% } %>
-        <% if (typeof metadata.rights !== 'undefined' && metadata.rights) { %><dc:rights><%= metadata.rights %></dc:rights><% } %>
+        <% if (typeof publisher !== 'undefined' && publisher) { %><dc:publisher><%= publisher %></dc:publisher><% } %>
+        <% if (typeof relation !== 'undefined' && relation) { %><dc:relation><%= relation %></dc:relation><% } %>
+        <% if (typeof coverage !== 'undefined' && coverage) { %><dc:coverage><%= coverage %></dc:coverage><% } %>
+        <% if (typeof rights !== 'undefined' && rights) { %><dc:rights><%= rights %></dc:rights><% } %>
 	</metadata>
 	<manifest>
     <%
@@ -90,7 +110,7 @@
     %>
 	</manifest>
 	<spine <%
-	    if (contents.ncx.id) { %>toc="<%= contents.ncx.id %>"<% }
+	    if (ncx.id) { %>toc="<%= ncx.id %>"<% }
 	%> >
 	<%
 	opfspine.forEach(function(item) { %>
