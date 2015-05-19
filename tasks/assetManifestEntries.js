@@ -18,9 +18,14 @@
  *  limitations under the License.
  */
 
+var fs     = require('fs');
+var path   = require('path');
+var globfs = require('globfs');
+var mime   = require('mime');
+
 module.exports = function(grunt) {
-    grunt.registerTask('bundleEPUB', function() {
+    grunt.registerTask('assetManifestEntries', function() {
         var done = this.async();
-        require('../index').bundleEPUB(done);
+        require('../index').assetManifestEntries(done);
     });
 };

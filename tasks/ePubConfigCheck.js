@@ -19,8 +19,8 @@
  */
 
 module.exports = function(grunt) {
-    grunt.registerTask('bundleEPUB', function() {
+    grunt.registerTask('ePubConfigCheck', function() {
         var done = this.async();
-        require('../index').bundleEPUB(done);
+        require('../index').ePubConfigCheck(done);
     });
 };

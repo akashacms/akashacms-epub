@@ -18,9 +18,12 @@
  *  limitations under the License.
  */
 
+var fs   = require('fs');
+var path = require('path');
+
 module.exports = function(grunt) {
-    grunt.registerTask('bundleEPUB', function() {
+    grunt.registerTask('makeContainerXml', function() {
         var done = this.async();
-        require('../index').bundleEPUB(done);
+        require('../index').makeContainerXml(done);
     });
 };
