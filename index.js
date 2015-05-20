@@ -363,14 +363,15 @@ module.exports.config = function(akasha, config) {
                                                 computeFullPath(akasha, config, metadata, fixedURL)
                                 ); // FIX href
                                 // logger.trace(href +' docEntry '+ docEntry);
-                                if ((!linktext || linktext.length <= 0 || linktext === href)
+                                if (!docEntry) {
+                                    next(new Error('No document found for '+ href));
+                                } else if ((!linktext || linktext.length <= 0 || linktext === href)
                                  && $(link).children() <= 0
                                  && docEntry.frontmatter.yaml.title) {
                                     $(link).text(docEntry.frontmatter.yaml.title);
-                                }
-                            }
-                            
-                            next();
+                                    next();
+                                } else next();
+                            } else next();
                         } else next();
                     } else next();
                 }
