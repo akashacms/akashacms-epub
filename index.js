@@ -350,10 +350,6 @@ module.exports.config = function(akasha, config) {
                             var fixedURL = rewriteURL(akasha, config, metadata, href, true);
                             logger.trace('org href '+ href +' fixed '+ fixedURL);
                             
-                            /* var prefix = computeRelativePrefixToRoot(metadata.documentPath);
-                            logger.trace('prefix of '+ metadata.documentPath +' is '+ prefix);
-                            logger.trace('href='+ href +' modified to '+ prefix+href); */
-                            
                             $(link).attr('href', fixedURL); // MAP href
                             $(link).attr('ak-mapped', "yes");
                             
@@ -388,15 +384,6 @@ module.exports.config = function(akasha, config) {
             $('html body img').removeAttr('ak-mapped');
             $('html head link').removeAttr('ak-mapped');
             done();
-            /* $('html body img').each(function(i, elem) { elements.push(elem); });
-            $('html head link').each(function(i, elem) { elements.push(elem); });
-            async.eachSeries(elements,
-            function(element, next) {
-                var mapped = $(element).attr('ak-mapped');
-                if (mapped && mapped === "yes") {
-                } else next();
-            },
-            done); */
         }.bind(null, akasha, config)
     ];
 
@@ -410,22 +397,24 @@ function computeFullPath(akasha, config, metadata, sourceURL) {
         throw new Error("Got external URL when not allowed " + sourceURL);
     } else {
 		var pRenderedUrl;
+		var docpath;
+		var docdir;
         if (urlSource.pathname.match(/^\//)) { // absolute URL
             return sourceURL;
         } else if (urlSource.pathname.match(/^\.\//)) {
             pRenderedUrl = url.parse(metadata.rendered_url);
-            var docpath = pRenderedUrl.pathname;
-            var docdir = path.dirname(docpath);
+            docpath = pRenderedUrl.pathname;
+            docdir = path.dirname(docpath);
             return path.normalize(docdir+'/'+sourceURL);
         } else if (urlSource.pathname.match(/^\.\.\//)) {
             pRenderedUrl = url.parse(metadata.rendered_url);
-            var docpath = pRenderedUrl.pathname;
-            var docdir = path.dirname(docpath);
+            docpath = pRenderedUrl.pathname;
+            docdir = path.dirname(docpath);
             return path.normalize(docdir+'/'+sourceURL);
         } else {
             pRenderedUrl = url.parse(metadata.rendered_url);
-            var docpath = pRenderedUrl.pathname;
-            var docdir = path.dirname(docpath);
+            docpath = pRenderedUrl.pathname;
+            docdir = path.dirname(docpath);
             return path.normalize(docdir+'/'+sourceURL);
         }
     }
@@ -777,109 +766,131 @@ function _scanForBookMetadata(akasha, config, done) {
     } else if (!tocEntry.frontmatter.yaml.akashacmsEPUB.chapters) {
         done(new Error("No Chapters in TOC"));
     } else {
-        var chapters = tocEntry.frontmatter.yaml.akashacmsEPUB.chapters;
-        
-        config.akashacmsEPUB.chapters = [];
-        
-        chapters.forEach(function(chapter) {
-            // logger.trace('chapter '+ chapter);
-            var chapterPath = computeFullPath(akasha, config, {
-                    rendered_url: config.akashacmsEPUB.bookmetadata.toc.href
-                }, chapter);
-            logger.trace('chapter '+ chapter +' '+ chapterPath);
-            var chapEntry = akasha.findDocumentForUrlpath(chapter);
-            function sectionList(documentPath, sections) {
-                var ret = [];
-                sections.forEach(function(section) {
-                    // logger.trace('section '+ section);
-                    var sectionPath = computeFullPath(akasha, config, {
-                            rendered_url: documentPath
-                        }, section);
-                    logger.trace('section '+ section +' '+ sectionPath);
-                    var sectionEntry = akasha.findDocumentForUrlpath(sectionPath);
-                    // logger.trace(sectionPath +' '+ util.inspect(sectionEntry.frontmatter.yaml));
-                    var sectionData = {
-                        id: sectionEntry.frontmatter.yaml.akashacmsEPUB.id,
-                        title: sectionEntry.frontmatter.yaml.title,
-                        href: sectionPath, /* rewriteURL(akasha, config, {
-                                rendered_url: sectionPath
-                            }, section, false), */ // MAP this URL
-                        type: "application/xhtml+xml",
-                        navclass: "book"
-                    };
-                    if (sectionEntry.frontmatter.yaml.akashacmsEPUB.sections) {
-                        sectionData.subchapters = sectionList(sectionPath, sectionEntry.frontmatter.yaml.akashacmsEPUB.sections);
-                    }
-                    ret.push(sectionData);
-                });
-                return ret;
-            }
-            // logger.trace(chapter +' '+ util.inspect(chapEntry.frontmatter.yaml));
-            var chapData = {
-                id: chapEntry.frontmatter.yaml.akashacmsEPUB.id,
-                title: chapEntry.frontmatter.yaml.title,
-                href: chapterPath, /* rewriteURL(akasha, config, {
-                                rendered_url: chapterPath
-                            }, chapter, false), */ // MAP this URL
-                type: "application/xhtml+xml",
-                navclass: "book"
-            };
-            if (chapEntry.frontmatter.yaml.akashacmsEPUB.sections) {
-                chapData.subchapters = sectionList(chapterPath, chapEntry.frontmatter.yaml.akashacmsEPUB.sections);
-            }
-            config.akashacmsEPUB.chapters.push(chapData);
-        });
-
-        config.akashacmsEPUB.manifest.push({
-            id: tocEntry.frontmatter.yaml.akashacmsEPUB.id,
-            properties: "nav",
-            type: "application/xhtml+xml",
-            href: rewriteURL(akasha, config, {
-                    rendered_url: config.akashacmsEPUB.bookmetadata.opf
-                }, config.akashacmsEPUB.bookmetadata.toc.href, false)  // MAP this URL
-        });
-        config.akashacmsEPUB.opfspine.push({
-            idref: tocEntry.frontmatter.yaml.akashacmsEPUB.id,
-            linear: "yes"
-        });
-        // logger.trace('_scanForBookMetadata '+ util.inspect(config.akashacmsEPUB.manifest));
-        if (config.akashacmsEPUB.bookmetadata.ncx) {
-            config.akashacmsEPUB.manifest.push({
-                id: config.akashacmsEPUB.bookmetadata.ncx.id,
-                type: "application/x-dtbncx+xml",
-                href: rewriteURL(akasha, config, {
-                        rendered_url: config.akashacmsEPUB.bookmetadata.opf
-                    }, config.akashacmsEPUB.bookmetadata.ncx.href, false)   // MAP this URL
+        try {
+            var chapters = tocEntry.frontmatter.yaml.akashacmsEPUB.chapters;
+            
+            config.akashacmsEPUB.chapters = [];
+            
+            chapters.forEach(function(chapter) {
+                logger.trace('chapter '+ chapter);
+                var chapterPath = computeFullPath(akasha, config, {
+                        rendered_url: config.akashacmsEPUB.bookmetadata.toc.href
+                    }, chapter);
+                logger.trace('chapter '+ chapter +' '+ chapterPath);
+                var chapEntry = akasha.findDocumentForUrlpath(chapter);
+                if (!chapEntry) {
+                    logger.error('No sectionEntry found for '+ chapter +' '+ chapterPath);
+                    throw new Error('No sectionEntry found for '+ chapter +' '+ chapterPath);
+                } else if (!chapEntry.frontmatter.yaml
+                        || !chapEntry.frontmatter.yaml.akashacmsEPUB
+                        || !chapEntry.frontmatter.yaml.akashacmsEPUB.id) {
+                    logger.error('No id found for '+ chapter +' '+ chapterPath);
+                    throw new Error('No id found for '+ chapter +' '+ chapterPath)
+                }
+                function sectionList(documentPath, sections) {
+                    var ret = [];
+                    sections.forEach(function(section) {
+                        logger.trace('section '+ section);
+                        var sectionPath = computeFullPath(akasha, config, {
+                                rendered_url: documentPath
+                            }, section);
+                        logger.trace('section '+ section +' '+ sectionPath);
+                        var sectionEntry = akasha.findDocumentForUrlpath(sectionPath);
+                        if (!sectionEntry) {
+                            logger.error('No sectionEntry found for '+ section +' '+ sectionPath);
+                            throw new Error('No sectionEntry found for '+ section +' '+ sectionPath);
+                        } else if (!sectionEntry.frontmatter.yaml
+                                || !sectionEntry.frontmatter.yaml.akashacmsEPUB
+                                || !sectionEntry.frontmatter.yaml.akashacmsEPUB.id) {
+                            logger.error('No id found for '+ section +' '+ sectionPath);
+                            throw new Error('No id found for '+ section +' '+ sectionPath);
+                        }
+                        // logger.trace(sectionPath +' '+ util.inspect(sectionEntry.frontmatter.yaml));
+                        var sectionData = {
+                            id: sectionEntry.frontmatter.yaml.akashacmsEPUB.id,
+                            title: sectionEntry.frontmatter.yaml.title,
+                            href: sectionPath, /* rewriteURL(akasha, config, {
+                                    rendered_url: sectionPath
+                                }, section, false), */ // MAP this URL
+                            type: "application/xhtml+xml",
+                            navclass: "book"
+                        };
+                        if (sectionEntry.frontmatter.yaml.akashacmsEPUB.sections) {
+                            sectionData.subchapters = sectionList(sectionPath, sectionEntry.frontmatter.yaml.akashacmsEPUB.sections);
+                        }
+                        ret.push(sectionData);
+                    });
+                    return ret;
+                }
+                logger.trace(chapter +' '+ util.inspect(chapEntry.frontmatter.yaml));
+                var chapData = {
+                    id: chapEntry.frontmatter.yaml.akashacmsEPUB.id,
+                    title: chapEntry.frontmatter.yaml.title,
+                    href: chapterPath, /* rewriteURL(akasha, config, {
+                                    rendered_url: chapterPath
+                                }, chapter, false), */ // MAP this URL
+                    type: "application/xhtml+xml",
+                    navclass: "book"
+                };
+                if (chapEntry.frontmatter.yaml.akashacmsEPUB.sections) {
+                    chapData.subchapters = sectionList(chapterPath, chapEntry.frontmatter.yaml.akashacmsEPUB.sections);
+                }
+                config.akashacmsEPUB.chapters.push(chapData);
             });
-        }
-        
-        var spineorder = 0;
-        var fixChapters = function(chapter) {
-            ++spineorder;
-            chapter.spineorder = spineorder;
-            
-            // logger.trace(util.inspect(chapter));
-            
+    
             config.akashacmsEPUB.manifest.push({
-                id: chapter.id,
+                id: tocEntry.frontmatter.yaml.akashacmsEPUB.id,
+                properties: "nav",
                 type: "application/xhtml+xml",
                 href: rewriteURL(akasha, config, {
                         rendered_url: config.akashacmsEPUB.bookmetadata.opf
-                    }, chapter.href, false)  // MAP this URL
+                    }, config.akashacmsEPUB.bookmetadata.toc.href, false)  // MAP this URL
             });
             config.akashacmsEPUB.opfspine.push({
-                idref: chapter.id,
+                idref: tocEntry.frontmatter.yaml.akashacmsEPUB.id,
                 linear: "yes"
             });
-            
-            if (chapter.subchapters) {
-                chapter.subchapters.forEach(fixChapters);
+            // logger.trace('_scanForBookMetadata '+ util.inspect(config.akashacmsEPUB.manifest));
+            if (config.akashacmsEPUB.bookmetadata.ncx) {
+                config.akashacmsEPUB.manifest.push({
+                    id: config.akashacmsEPUB.bookmetadata.ncx.id,
+                    type: "application/x-dtbncx+xml",
+                    href: rewriteURL(akasha, config, {
+                            rendered_url: config.akashacmsEPUB.bookmetadata.opf
+                        }, config.akashacmsEPUB.bookmetadata.ncx.href, false)   // MAP this URL
+                });
             }
-        };
-        config.akashacmsEPUB.chapters.forEach(fixChapters);
-        
-        // logger.trace('_scanForBookMetadata #2 '+ util.inspect(config.akashacmsEPUB.manifest));
-        done();
+            
+            var spineorder = 0;
+            var fixChapters = function(chapter) {
+                ++spineorder;
+                chapter.spineorder = spineorder;
+                
+                // logger.trace(util.inspect(chapter));
+                
+                config.akashacmsEPUB.manifest.push({
+                    id: chapter.id,
+                    type: "application/xhtml+xml",
+                    href: rewriteURL(akasha, config, {
+                            rendered_url: config.akashacmsEPUB.bookmetadata.opf
+                        }, chapter.href, false)  // MAP this URL
+                });
+                config.akashacmsEPUB.opfspine.push({
+                    idref: chapter.id,
+                    linear: "yes"
+                });
+                
+                if (chapter.subchapters) {
+                    chapter.subchapters.forEach(fixChapters);
+                }
+            };
+            config.akashacmsEPUB.chapters.forEach(fixChapters);
+            
+            // logger.trace('_scanForBookMetadata #2 '+ util.inspect(config.akashacmsEPUB.manifest));
+            done();
+        } catch (err) {
+            done(err);
+        }
     }
 };
 
