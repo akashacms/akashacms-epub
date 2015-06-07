@@ -345,7 +345,8 @@ module.exports.config = function(akasha, config) {
                         var uHref = url.parse(href, true, true);
                         // We're only going to look at local links,
                         // no processing for external links
-                        if (! uHref.protocol && !uHref.slashes) {
+                        // no processing for hash links within the document (such as footnotes)
+                        if (! uHref.protocol && !uHref.slashes && !uHref.host && uHref.pathname) {
                             
                             var fixedURL = rewriteURL(akasha, config, metadata, href, true);
                             logger.trace('org href '+ href +' fixed '+ fixedURL);
@@ -399,14 +400,16 @@ function computeFullPath(akasha, config, metadata, sourceURL) {
 		var pRenderedUrl;
 		var docpath;
 		var docdir;
-        if (urlSource.pathname.match(/^\//)) { // absolute URL
+		if (!urlSource.pathname) {
+		    return sourceURL;
+		} else if (urlSource.pathname && urlSource.pathname.match(/^\//)) { // absolute URL
             return sourceURL;
-        } else if (urlSource.pathname.match(/^\.\//)) {
+        } else if (urlSource.pathname && urlSource.pathname.match(/^\.\//)) {
             pRenderedUrl = url.parse(metadata.rendered_url);
             docpath = pRenderedUrl.pathname;
             docdir = path.dirname(docpath);
             return path.normalize(docdir+'/'+sourceURL);
-        } else if (urlSource.pathname.match(/^\.\.\//)) {
+        } else if (urlSource.pathname && urlSource.pathname.match(/^\.\.\//)) {
             pRenderedUrl = url.parse(metadata.rendered_url);
             docpath = pRenderedUrl.pathname;
             docdir = path.dirname(docpath);
@@ -423,13 +426,14 @@ function computeFullPath(akasha, config, metadata, sourceURL) {
 function rewriteURL(akasha, config, metadata, sourceURL, allowExternal) {
     logger.trace('rewriteURL '+ sourceURL);
 	var urlSource = url.parse(sourceURL, true, true);
+	logger.trace(util.inspect(urlSource));
 	if (urlSource.protocol || urlSource.slashes) {
         if (!allowExternal) {
             throw new Error("Got external URL when not allowed " + sourceURL);
         } else return sourceURL;
     } else {
 		var pRenderedUrl;
-        if (urlSource.pathname.match(/^\//)) { // absolute URL
+        if (urlSource.pathname && urlSource.pathname.match(/^\//)) { // absolute URL
             var prefix = computeRelativePrefixToRoot(metadata.rendered_url);
             // logger.trace('absolute - prefix for '+ metadata.rendered_url +' == '+ prefix);
             var ret = path.normalize(prefix+sourceURL);

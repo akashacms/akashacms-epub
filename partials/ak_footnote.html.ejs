@@ -1,0 +1,16 @@
+<!-- Override ak_footnote.html.ejs so that in EPUB's 
+  -- the footnote contains the text of the URL -->
+<div class="ak-footnote">
+<%= count %>. <a name="<%= name %>">[<%= name %>]</a>: <a href="<%= url %>" <%
+    if (rel) {
+        %>rel="<%= rel %>" <%
+    } %>><%
+   if (title) {
+      %><span class="ak-footnote-title"><%= title %></span><%
+   } else {
+      %><span class="ak-footnote-url"><%= url %></span><%
+   }
+%></a>
+<span class="ak-footnote-description"><%= description %></span>
+<span class="ak-footnote-urltext"><%= url %></span>
+</div>
