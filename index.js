@@ -40,52 +40,16 @@ var rendererEpubContainer = require('./lib/render-epubcontainer');
 
 var logger;
 
-
-module.exports.startup = function(akashacms, config) {
+/**
+ * prepareConfig - Simplify the configuration object by filling in defaults
+ *      that make sense for blogPodcast sites.
+ */
+module.exports.prepareConfig = function(akashacms, config) {
+    
     if (!config) {
         config = {};
     }
-
-    var stat;
-    if (!config.root_assets) {
-        config.root_assets = [];
-        if (fs.existsSync('assets') && (stat = fs.statSync('assets'))) {
-            if (stat.isDirectory()) {
-                config.root_assets = [ 'assets' ];
-            }
-        }
-    }
-    if (!config.root_layouts) {
-        config.root_layouts = [];
-        if (fs.existsSync('layouts') && (stat = fs.statSync('layouts'))) {
-            if (stat.isDirectory()) {
-                config.root_layouts = [ 'layouts' ];
-            }
-        }
-    }
-    if (!config.root_partials) {
-        config.root_partials = [];
-        if (fs.existsSync('partials') && (stat = fs.statSync('partials'))) {
-            if (stat.isDirectory()) {
-                config.root_partials = [ 'partials' ];
-            }
-        }
-    }
-    if (!config.root_out) {
-        config.root_out = 'out';
-    }
-    if (!config.root_docs) {
-        config.root_docs = [];
-        if (fs.existsSync('documents') && (stat = fs.statSync('documents'))) {
-            if (stat.isDirectory()) {
-                config.root_docs = [ 'documents' ];
-            }
-        }
-    }
-    
-    if (!config.root_out) {
-        throw new Error('No output directory');
-    }
+    config = akashacms.prepareConfig(config);
     
     config.cheerio = {
         recognizeSelfClosing: true,
@@ -93,37 +57,9 @@ module.exports.startup = function(akashacms, config) {
         xmlMode: true
     };
     
-    if (!config.headerScripts) {
-        config.headerScripts = {
-            stylesheets: [ ],
-            javaScriptTop: [ ],
-            javaScriptBottom: [ ]
-        };
-    }
-    
     if (!config.config) {
         config.config = function(akasha) {
             akasha.registerPlugins([ { name: 'akashacms-epub', plugin: module.exports } ]);
-        };
-    }
-    
-    if (!config.log4js) {
-        config.log4js = {
-            appenders: [
-                { type: "console" }
-            ],
-            replaceConsole: true,
-            levels: {
-                "find": "INFO",
-                "fileCache": "INFO",
-                "renderer": "INFO",
-                "builtin": "INFO",
-                "akashacms": "INFO",
-                "embeddables": "INFO",
-                "epub": "INFO",
-                "[all]": "INFO"/*,
-                "renderer": "TRACE"*/
-            }
         };
     }
     
@@ -147,6 +83,16 @@ module.exports.startup = function(akashacms, config) {
             config.headerScripts.javaScriptBottom.push(jsentry);
         });
     }
+    
+    return config;
+};
+
+/**
+ * startup - Simplify configuration for a Blog using Grunt
+ */
+module.exports.startup = function(akashacms, config) {
+    
+    module.exports.prepareConfig(akashacms, config);
     
     // Now that we've prepared the config object, call akashacms.config
     akashacms.config(config);

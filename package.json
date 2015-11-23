@@ -14,7 +14,7 @@
   "keywords": [
       "epub", "epub3", "markdown", "ebook", "epub3 generator", "epub generator", "ebook generator"
   ],
-  "version": "0.4.13",
+  "version": "0.4.14",
   "engines": {
     "node": ">=0.10.1"
   },
