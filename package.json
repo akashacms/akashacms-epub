@@ -12,21 +12,28 @@
     "url": "git://github.com/akashacms/akashacms-epub.git"
   },
   "keywords": [
-      "epub", "epub3", "markdown", "ebook", "epub3 generator", "epub generator", "ebook generator"
+    "epub",
+    "epub3",
+    "markdown",
+    "ebook",
+    "epub3 generator",
+    "epub generator",
+    "ebook generator"
   ],
   "version": "0.4.14",
   "engines": {
     "node": ">=0.10.1"
   },
   "dependencies": {
-    "node-uuid": "*",
-    "fs-extra": "*",
-    "async": "*",
     "archiver": "*",
+    "async": "*",
     "ejs": "*",
-    "sprintf-js": "*",
+    "fs-extra": "*",
     "globfs": "*",
+    "js-yaml": "*",
+    "jsdom": "^7.2.1",
     "mime": "*",
-    "js-yaml": "*"
+    "node-uuid": "*",
+    "sprintf-js": "*"
   }
 }

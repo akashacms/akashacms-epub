@@ -1,4 +1,3 @@
-<%
 /**
  * AkashaEPUB - akashacms-epub
  *
@@ -18,13 +17,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-%><nav epub:type="<%= navtype %>" id="<%= id %>">
-<h1><%= title %></h1>
-<% if (subTitle) { %><h2><%= subTitle %></h2><% } %>
-<%- partial("toc-epub3-toc.html.ejs", {
-            chapters: chapters,
-            type: toctype,
-            start: tocstart
-    }) %>
-</nav>
 
+module.exports = function(grunt) {
+    grunt.registerTask('makeOPFNCX', function() {
+        var done = this.async();
+        require('../index').makeOPFNCX(done);
+    });
+};

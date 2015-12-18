@@ -1,8 +1,8 @@
 /**
  * AkashaEPUB - akashacms-epub
- * 
+ *
  * Copyright 2015 David Herron
- * 
+ *
  * This file is part of AkashaCMS-epub (http://akashacms.com/).
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,6 +31,7 @@ var yaml      = require('js-yaml');
 var archiver  = require('archiver');
 var sprintf   = require("sprintf-js").sprintf,
     vsprintf  = require("sprintf-js").vsprintf;
+var jsdom     = require('jsdom');
 // IGNORE var epubcheck = require('epubcheck');
 
 var rendererXmlEjs = require('./lib/render-xmlejs');
@@ -142,6 +143,7 @@ module.exports.config = function(akasha, config) {
     module.exports.makeCoverFiles = _makeCoverFiles.bind(null, akasha, config);
     module.exports.makeMetaInfDir = _makeMetaInfDir.bind(null, config);
     module.exports.makeMimetypeFile = _makeMimetypeFile.bind(null, config);
+    module.exports.makeOPFNCX = _makeOPFNCX.bind(null, akasha, config);
     module.exports.makeOPF = _makeOPF.bind(null, akasha, config);
     module.exports.makeTOC = _makeTOC.bind(null, akasha, config);
     module.exports.scanForBookMetadata = _scanForBookMetadata.bind(null, akasha, config);
@@ -184,7 +186,7 @@ module.exports.config = function(akasha, config) {
                         next();
                     }
                 });
-            }, 
+            },
             done);
         }.bind(null, akasha, config),
         
@@ -214,7 +216,7 @@ module.exports.config = function(akasha, config) {
                                 next();
                             }
                         });
-            }, 
+            },
             done);
         }.bind(null, akasha, config),
         
@@ -244,7 +246,7 @@ module.exports.config = function(akasha, config) {
                                 next();
                             }
                         });
-            }, 
+            },
             done);
         }.bind(null, akasha, config),
         
@@ -265,7 +267,7 @@ module.exports.config = function(akasha, config) {
                     $(element).attr('ak-mapped', "yes");
                     next();
                 }
-            }, 
+            },
             done);
         }.bind(null, akasha, config),
         
@@ -459,8 +461,10 @@ function _assetManifestEntries(akasha, config, done) {
     // and aren't already in the manifest for any other reason.
     
     var assetNum = 0;
-    globfs.operate(config.root_assets.concat(config.root_docs), [ "**/*" ], 
+    globfs.operate(config.root_assets.concat(config.root_docs), [ "**/*" ],
         function(basedir, fpath, fini) {
+            
+            // logger.info('asset file '+ path.join(basedir, fpath));
             
             fs.stat(path.join(basedir, fpath), function(err, stats) {
                 if (err || !stats) {
@@ -474,7 +478,7 @@ function _assetManifestEntries(akasha, config, done) {
                     akasha.readDocumentEntry(fpath, function(err, docEntry) {
                         
                         if (docEntry) {
-                            // We can skip document files because they'll get into the manifest 
+                            // We can skip document files because they'll get into the manifest
                             // through other means
                             fini(null);
                         } else {
@@ -527,7 +531,7 @@ function _bundleEPUB(config, done) {
             
     output.on('close', function() {
         logger.info(archive.pointer() + ' total bytes');
-        logger.info('archiver has been finalized and the output file descriptor has closed.');  
+        logger.info('archiver has been finalized and the output file descriptor has closed.');
         done();
     });
     
@@ -604,7 +608,7 @@ function _ePubConfigCheck(config, done) {
             if (config.akashacmsEPUB.bookmetadata.toc && config.akashacmsEPUB.bookmetadata.toc.href) next();
             else next(new Error("No toc entry"));
         }
-    ], 
+    ],
     done);
 };
 
@@ -677,6 +681,193 @@ function _makeMimetypeFile(config, done) {
     fs.writeFile(path.join(config.root_out, "mimetype"), "application/epub+zip", "utf8", done);
 };
 
+function _makeOPFNCX(akasha, config, done) {
+    
+    // logger.info('_makeOPFNCX');
+    
+    var tocHtml;
+    
+    async.series([
+        // read the designated TOC file (toc.html)
+        function(next) {
+            fs.readFile(path.join(config.root_out, config.akashacmsEPUB.bookmetadata.toc.href), 'utf8',
+                function(err, data) {
+                    if (err) next(err);
+                    else {
+                        // logger.info('read '+ path.join(config.root_out, config.akashacmsEPUB.bookmetadata.toc.href));
+                        tocHtml = data;
+                        next();
+                    }
+                });
+        },
+        // Look for the designated element for TOC -- nav > ol
+        // Gather data required to support manifest and opfspine
+        // gather data required to support toc.ncx.ejs
+        function(next) {
+            var doc = jsdom.jsdom(tocHtml, {});
+            
+            var navs = doc.getElementsByTagName("nav");
+            var thenav;
+            for (var navno = 0; navno < navs.length; navno++) {
+                if (navs[navno].id === config.akashacmsEPUB.bookmetadata.toc.id) {
+                    thenav = navs[navno];
+                    break;
+                }
+            }
+            if (!thenav) {
+                return next(new Error('no <nav id="'+ config.akashacmsEPUB.bookmetadata.toc.id +'">'));
+            }
+            // logger.info('found nav');
+            
+            var topol;
+            for (var navchild = 0; navchild < thenav.childNodes.length; navchild++) {
+                if (thenav.childNodes[navchild].nodeName
+                 && thenav.childNodes[navchild].nodeName.toUpperCase() === 'ol'.toUpperCase()
+                 && thenav.childNodes[navchild].hasAttributes()
+                 && thenav.childNodes[navchild].getAttribute('start')
+                 && thenav.childNodes[navchild].getAttribute('type')) {
+                    topol = thenav.childNodes[navchild];
+                    break;
+                } else {
+                    /* logger.info('nodeName '+ thenav.childNodes[navchild].nodeName);
+                    if (thenav.childNodes[navchild].getAttribute)
+                        logger.info('start '+ thenav.childNodes[navchild].getAttribute('start'));
+                    if (thenav.childNodes[navchild].getAttribute)
+                        logger.info('type '+ thenav.childNodes[navchild].getAttribute('type')); */
+                }
+            }
+            if (!topol) {
+                return next(new Error('no <nav><ol type= start=></ol></nav>'));
+            }
+            // logger.info('found topol');
+            
+            
+            // cover image/file manifest and opfspine entries are added in _makeCoverFiles
+            
+            // Add specific manifest and opfspine entries for TOC and NCX files
+            
+            config.akashacmsEPUB.manifest.push({
+                id: config.akashacmsEPUB.bookmetadata.toc.id,
+                properties: "nav",
+                type: "application/xhtml+xml",
+                href: config.akashacmsEPUB.bookmetadata.toc.href
+            });
+            config.akashacmsEPUB.opfspine.push({
+                idref: config.akashacmsEPUB.bookmetadata.toc.id,
+                linear: "yes"
+            });
+            // logger.trace('_scanForBookMetadata '+ util.inspect(config.akashacmsEPUB.manifest));
+            if (config.akashacmsEPUB.bookmetadata.ncx) {
+                config.akashacmsEPUB.manifest.push({
+                    id: config.akashacmsEPUB.bookmetadata.ncx.id,
+                    type: "application/x-dtbncx+xml",
+                    href: config.akashacmsEPUB.bookmetadata.ncx.href
+                });
+            }
+            
+            // Scan the nested tree of ol's to capture data for .manifest .opfspine and .chapters
+            var spineorder = 0;
+            function scanOL(ol, chaps) {
+                // logger.info('scanOL ol.length='+ ol.length);
+                for (var olno = 0; olno < ol.childNodes.length; olno++) {
+                    var olchild = ol.childNodes[olno];
+                    // logger.info('olchild.nodeName '+ olchild.nodeName);
+                    if (olchild.nodeName && olchild.nodeName.toUpperCase() === 'li'.toUpperCase()) {
+                        for (var childno = 0; childno < olchild.childNodes.length; childno++) {
+                            // logger.info('olchild.childNodes[childno].nodeName '+ olchild.childNodes[childno].nodeName);
+                            if (olchild.childNodes[childno].nodeName
+                             && olchild.childNodes[childno].nodeName.toUpperCase() === 'ol'.toUpperCase()) {
+                                chaps.subchapters = [];
+                                scanOL(olchild.childNodes[childno], chaps.subchapters);
+                            } else if (olchild.childNodes[childno].nodeName
+                                    && olchild.childNodes[childno].nodeName.toUpperCase() === 'a'.toUpperCase()) {
+                                var anchor = olchild.childNodes[childno];
+                                
+                                config.akashacmsEPUB.manifest.push({
+                                    id: anchor.getAttribute('id'),
+                                    type: "application/xhtml+xml",
+                                    href: anchor.getAttribute('href')
+                                });
+                                
+                                config.akashacmsEPUB.opfspine.push({
+                                    idref: anchor.getAttribute('id'),
+                                    linear: "yes"
+                                });
+                                
+                                chaps.push({
+                                    id: anchor.getAttribute('id'),
+                                    title: anchor.nodeValue,
+                                    href: anchor.getAttribute('href'),
+                                    type: "application/xhtml+xml",
+                                    navclass: "book",
+                                    spineorder: ++spineorder
+                                });
+                            }
+                        }
+                    }
+                }
+            };
+            config.akashacmsEPUB.chapters = [];
+            scanOL(topol, config.akashacmsEPUB.chapters);
+            
+            // logger.info(util.inspect(config.akashacmsEPUB.manifest));
+            
+            next();
+        },
+        // fill in manifest entries for asset files
+        function(next) {
+            _assetManifestEntries(akasha, config, next);
+        },
+        // do current _makeOPF function
+        function(next) {
+            akasha.partial("open-package.opf.ejs", {
+                title: config.akashacmsEPUB.bookmetadata.title,
+                languages: config.akashacmsEPUB.bookmetadata.languages,
+                date: config.akashacmsEPUB.bookmetadata.published.date,
+                modified: config.akashacmsEPUB.bookmetadata.published.modified,
+                identifiers: config.akashacmsEPUB.bookmetadata.identifiers,
+                subjects: config.akashacmsEPUB.bookmetadata.subjects,
+                description: config.akashacmsEPUB.bookmetadata.description,
+                format: config.akashacmsEPUB.bookmetadata.format,
+                source: config.akashacmsEPUB.bookmetadata.source,
+                creators: config.akashacmsEPUB.bookmetadata.creators,
+                contributors: config.akashacmsEPUB.bookmetadata.contributors,
+                publisher: config.akashacmsEPUB.bookmetadata.publisher,
+                relation: config.akashacmsEPUB.bookmetadata.relation,
+                coverage: config.akashacmsEPUB.bookmetadata.coverage,
+                rights: config.akashacmsEPUB.bookmetadata.rights,
+                ncx: config.akashacmsEPUB.bookmetadata.ncx,
+                manifest: config.akashacmsEPUB.manifest,
+                opfspine: config.akashacmsEPUB.opfspine
+            }, function(err, html) {
+                if (err) next(err);
+                else {
+                    // logger.info('writing '+ path.join(config.root_out, config.akashacmsEPUB.bookmetadata.opf));
+                    fs.writeFile(path.join(config.root_out, config.akashacmsEPUB.bookmetadata.opf), html, "utf8", next);
+                }
+            });
+        },
+        // do current _makeTOC function
+        function(next) {
+            if (config.akashacmsEPUB.bookmetadata.ncx) {
+                akasha.partial("toc.ncx.ejs", {
+                    identifiers: config.akashacmsEPUB.bookmetadata.identifiers,
+                    title: config.akashacmsEPUB.bookmetadata.title,
+                    creators: config.akashacmsEPUB.bookmetadata.creators,
+                    chapters: config.akashacmsEPUB.chapters
+                }, function(err, html) {
+                    if (err) next(err);
+                    else {
+                        // logger.info('writing '+ path.join(config.root_out, config.akashacmsEPUB.bookmetadata.ncx.href));
+                        fs.writeFile(path.join(config.root_out, config.akashacmsEPUB.bookmetadata.ncx.href), html, "utf8", next);
+                    }
+                });
+            } else next();
+        }
+    ],
+    done);
+};
+
 function _makeOPF(akasha, config, done) {
     akasha.partial("open-package.opf.ejs", {
         title: config.akashacmsEPUB.bookmetadata.title,
@@ -745,6 +936,7 @@ function _makeTOC(akasha, config, done) {
     ],
     done);
 };
+
 function _scanForBookMetadata(akasha, config, done) {
     
     var tocEntry = akasha.findDocumentForUrlpath(config.akashacmsEPUB.bookmetadata.toc.href);
