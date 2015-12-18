@@ -767,18 +767,22 @@ function _makeOPFNCX(akasha, config, done) {
             
             // Scan the nested tree of ol's to capture data for .manifest .opfspine and .chapters
             var spineorder = 0;
-            function scanOL(ol, chaps) {
-                // logger.info('scanOL ol.length='+ ol.length);
+            function scanOL(ol) {
+                // logger.info('scanOL ol.length='+ ol.childNodes.length);
+                var chaps = [];
                 for (var olno = 0; olno < ol.childNodes.length; olno++) {
                     var olchild = ol.childNodes[olno];
                     // logger.info('olchild.nodeName '+ olchild.nodeName);
                     if (olchild.nodeName && olchild.nodeName.toUpperCase() === 'li'.toUpperCase()) {
+                        var section; // section refers to chapters or subchapters
+                        var subchapters;
+                        section = undefined;
+                        subchapters = undefined;
                         for (var childno = 0; childno < olchild.childNodes.length; childno++) {
                             // logger.info('olchild.childNodes[childno].nodeName '+ olchild.childNodes[childno].nodeName);
                             if (olchild.childNodes[childno].nodeName
                              && olchild.childNodes[childno].nodeName.toUpperCase() === 'ol'.toUpperCase()) {
-                                chaps.subchapters = [];
-                                scanOL(olchild.childNodes[childno], chaps.subchapters);
+                                subchapters = scanOL(olchild.childNodes[childno]);
                             } else if (olchild.childNodes[childno].nodeName
                                     && olchild.childNodes[childno].nodeName.toUpperCase() === 'a'.toUpperCase()) {
                                 var anchor = olchild.childNodes[childno];
@@ -794,23 +798,30 @@ function _makeOPFNCX(akasha, config, done) {
                                     linear: "yes"
                                 });
                                 
-                                chaps.push({
+                                section = {
                                     id: anchor.getAttribute('id'),
                                     title: anchor.nodeValue,
                                     href: anchor.getAttribute('href'),
                                     type: "application/xhtml+xml",
                                     navclass: "book",
                                     spineorder: ++spineorder
-                                });
+                                };
                             }
                         }
+                        if (!section) {
+                            return next(new Error('<li> has no <a> children'))
+                        }
+                        if (subchapters) section.subchapters = subchapters;
+                        chaps.push(section);
                     }
                 }
+                // logger.info(util.inspect(chaps));
+                return chaps;
             };
             config.akashacmsEPUB.chapters = [];
-            scanOL(topol, config.akashacmsEPUB.chapters);
+            config.akashacmsEPUB.chapters = scanOL(topol);
             
-            // logger.info(util.inspect(config.akashacmsEPUB.manifest));
+            // logger.info(util.inspect(config.akashacmsEPUB.chapters));
             
             next();
         },
