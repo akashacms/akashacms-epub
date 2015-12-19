@@ -659,7 +659,7 @@ function _makeCoverFiles(akasha, config, done) {
             idref: config.akashacmsEPUB.bookmetadata.cover.writeHtml.id,
             linear: "yes"
         });
-        console.log(util.inspect('_makeCoverFiles '+ util.inspect(config.akashacmsEPUB.opfspine)));
+        // console.log(util.inspect('_makeCoverFiles '+ util.inspect(config.akashacmsEPUB.opfspine)));
         akasha.partial("cover.html.ejs", {
             src: rewriteURL(akasha, config, {
                     rendered_url: config.akashacmsEPUB.bookmetadata.opf
@@ -728,12 +728,6 @@ function _makeOPFNCX(akasha, config, done) {
                  && thenav.childNodes[navchild].getAttribute('type')) {
                     topol = thenav.childNodes[navchild];
                     break;
-                } else {
-                    /* logger.info('nodeName '+ thenav.childNodes[navchild].nodeName);
-                    if (thenav.childNodes[navchild].getAttribute)
-                        logger.info('start '+ thenav.childNodes[navchild].getAttribute('start'));
-                    if (thenav.childNodes[navchild].getAttribute)
-                        logger.info('type '+ thenav.childNodes[navchild].getAttribute('type')); */
                 }
             }
             if (!topol) {
