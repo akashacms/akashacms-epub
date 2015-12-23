@@ -821,8 +821,99 @@ function _makeOPFNCX(akasha, config, done) {
         },
         // fill in manifest entries for asset files
         function(next) {
-            _assetManifestEntries(akasha, config, next);
+            
+                    
+            // Stylesheet and JavaScript files are listed in the config
+            config.headerScripts.stylesheets.forEach(function(cssentry) {
+                config.akashacmsEPUB.manifest.push({
+                    id: cssentry.id,
+                    type: "text/css",
+                    href: rewriteURL(akasha, config, { rendered_url: config.akashacmsEPUB.bookmetadata.opf }, cssentry.href, false)  // MAP this URL
+                });
+            });
+        
+            config.headerScripts.javaScriptTop.concat(config.headerScripts.javaScriptBottom).forEach(function(jsentry) {
+                config.akashacmsEPUB.manifest.push({
+                    id: jsentry.id,
+                    type: "application/javascript",
+                    href: rewriteURL(akasha, config, { rendered_url: config.akashacmsEPUB.bookmetadata.opf }, jsentry.href, false)  // MAP this URL
+                });
+            });
+            
+            // There had formerly been a list of allowed file extensions in globfs.operate
+            //
+            // Turns out to have been too restrictive because those who wanted to
+            // include other kinds of files weren't free to do so.
+            //
+            // The purpose here is to add manifest entries for files that aren't documents
+            // and aren't already in the manifest for any other reason.
+            
+            var assetNum = 0;
+            globfs.operate(config.root_assets.concat(config.root_docs), [ "**/*" ],
+                function(basedir, fpath, fini) {
+                    
+                    // logger.trace('asset file '+ path.join(basedir, fpath));
+                    
+                    fs.stat(path.join(basedir, fpath), function(err, stats) {
+                        if (err || !stats) {
+                            // Shouldn't get this, because globfs will only give us
+                            // files which exist
+                            logger.error('ERROR '+ basedir +' '+ fpath +' '+ err);
+                            fini();
+                        } else if (stats.isDirectory()) {
+                            // Skip directories
+                            // logger.trace('isDirectory '+ basedir +' '+ fpath);
+                            fini();
+                        } else {
+                            // logger.trace('regular file '+ basedir +' '+ fpath);
+                            akasha.readDocumentEntry(fpath, function(err, docEntry) {
+                            
+                                if (docEntry) {
+                                    // If there's a docEntry, we need to override the fpath
+                                    // with the filename it renders to.  This is to properly
+                                    // detect files that are already in the manifest.
+                                    
+                                    // logger.trace('docEntry '+ basedir +' '+ fpath);
+                                    fpath = docEntry.renderedFileName;
+                                }
+                                // Detect any files that are already in manifest
+                                // Only add to manifest stuff which isn't already there
+                                var inManifest = false;
+                                config.akashacmsEPUB.manifest.forEach(function(item) {
+                                    if (item.href === fpath) {
+                                        inManifest = true;
+                                    }
+                                });
+                                if (!inManifest) {
+                                    // We're not using the mime library for some
+                                    // file extensions because it gives
+                                    // incorrect values for the .otf and .ttf files
+                                    
+                                    // logger.trace('assetManifestEntries '+ basedir +' '+ fpath);
+                                    var mimetype;
+                                    if (fpath.match(/\.ttf$/i)) mimetype = "application/vnd.ms-opentype";
+                                    else if (fpath.match(/\.otf$/i)) mimetype = "application/vnd.ms-opentype";
+                                    else mimetype = mime.lookup(fpath);
+                                    
+                                    config.akashacmsEPUB.manifest.push({
+                                        id: "asset" + assetNum++,
+                                        type: mimetype,
+                                        href: rewriteURL(akasha, config, {
+                                            rendered_url: config.akashacmsEPUB.bookmetadata.opf
+                                        }, fpath, false)
+                                    });
+                                }
+                                fini();
+                            });
+                        }
+                    });
+                },
+                next);
         },
+        /* function(next) {
+            console.log(util.inspect(config.akashacmsEPUB.manifest));
+            next();
+        }, */
         // do current _makeOPF function
         function(next) {
             akasha.partial("open-package.opf.ejs", {
